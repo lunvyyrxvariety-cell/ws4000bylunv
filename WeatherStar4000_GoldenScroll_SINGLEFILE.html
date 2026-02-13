@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WeatherStar 4000 - Golden Scroll (Single File)</title>
+
+<style>
+  @font-face {
+    font-family: "Star4000";
+    src: local("Star4000"), local("Star 4000"),
+      url("https://wsbylunv.neocities.org/Star4000.ttf") format("truetype");
+    font-weight: normal;
+    font-style: normal;
+  }
+
+  * { font-family: "Star4000", monospace !important; margin: 0; padding: 0; box-sizing: border-box; }
+  body { background:#111; height:100vh; display:flex; justify-content:center; align-items:center; overflow:hidden; }
+
+  #loading-screen{
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    background:#000; color:#ffff00; font-size:45px;
+    display:none; justify-content:center; align-items:center;
+    z-index:100; text-shadow:3px 3px 0 #000;
+  }
+
+  .ws-container{ display:flex; position:relative; }
+
+  .sidebar{
+    width:280px;
+    background:linear-gradient(90deg,#001a33,#003366,#001a33);
+    border-right:5px solid #000;
+    padding:20px;
+    z-index:10;
+    height:820px;
+  }
+
+  .label{ color:#fff; font-size:14px; margin-top:15px; margin-bottom:5px; }
+  input{
+    width:100%; padding:10px; background:#000; border:2px solid #ffff00;
+    color:#ffff00; font-size:18px; outline:none;
+  }
+  button{
+    width:100%; margin-top:5px; padding:10px; background:#ffff00; color:#000;
+    border:none; cursor:pointer; font-size:16px; font-weight:bold;
+  }
+  .test-btn{ background:#222; color:#aaa; font-size:11px; margin-bottom:4px; border:1px solid #444; width:100%; }
+  #pause-btn{ background:#ff4444; color:#fff; margin-top:20px; }
+  #mute-btn{ background:#444; color:#fff; margin-top:5px; }
+  #scan-btn{ background:#0b3; color:#fff; margin-top:5px; }
+  #force-refresh-btn{ background:#228; color:#fff; margin-top:5px; }
+  .tiny{ font-size:12px; color:#00ccff; line-height:1.2; }
+
+  #ws4000-screen{
+    position:relative;
+    width:1091px; height:820px;
+    background-size:100% 100%;
+    flex-shrink:0; overflow:hidden;
+    background-image:url("https://wsbylunv.neocities.org/ws4000_bg.png");
+    transition:background-position 1.2s ease-in-out, background-size 1.2s ease-in-out;
+  }
+
+  /* REGIONAL PAGE */
+  #ws4000-screen.regional-bg{
+    background-image:
+      url("https://wsbylunv.neocities.org/ws4000wherediditgo.png"),
+      url("https://raw.githubusercontent.com/lunvyyrx23/ws4000byaqzzyx/main/Basemap2.png") !important;
+    background-size:100% 100%, 560%;
+  }
+
+  #ws4000-screen.travel-bg{ background-image:url("https://wsbylunv.neocities.org/ws4000travel.png") !important; }
+
+  .outline-text{
+    text-shadow:
+      -3px -3px 0 #000,
+       3px -3px 0 #000,
+      -3px  3px 0 #000,
+       3px  3px 0 #000,
+       4px  4px 4px rgba(0,0,0,0.8);
+  }
+
+  .header{
+    color:#ffff00; font-size:55px; position:absolute; top:50px; left:350px;
+    line-height:1.1; text-transform:uppercase; z-index:5;
+  }
+
+  .location-label{
+    color:#ffff00; font-size:38px; position:absolute; top:220px; right:120px;
+    text-align:right; width:650px; text-transform:uppercase;
+  }
+
+  #current-content, #obs-table, #hourly-content, #travel-content { display:none; }
+
+  #temp-value{ color:#fff; font-size:140px; position:absolute; top:200px; left:100px; }
+  #weather-icon{ position:absolute; top:385px; left:125px; width:180px; image-rendering:pixelated; }
+  .icon-subtext{ position:absolute; top:585px; left:125px; color:#fff; font-size:35px; white-space:pre; }
+  .condition-label{ color:#fff; font-size:30px; position:absolute; top:335px; left:130px; }
+
+  .stats-box{
+    color:#fff; font-size:34px; line-height:1.35;
+    position:absolute; top:290px; right:315px;
+    width:380px;
+  }
+
+  #obs-table{ position:absolute; top:180px; left:110px; width:870px; color:#fff; font-size:38px; }
+  .obs-row{ display:grid; grid-template-columns:320px 100px 280px 170px; margin-bottom:20px; }
+
+  /* ===== Vertical scroll window (pages 3 & 4) =====
+     user request: ~250px tall, centered-ish on bg */
+  #hourly-content, #travel-content{
+    width:930px; height:250px;
+    position:absolute; top:350px; left:80px;
+    overflow:hidden;
+  }
+  .scroll-window{
+    position:absolute; inset:0;
+    overflow:hidden;
+  }
+  .scroll-inner{
+    will-change: transform;
+    animation: vscroll 18s linear infinite;
+  }
+  @keyframes vscroll{
+    0%   { transform: translateY(0); }
+    100% { transform: translateY(-50%); }
+  }
+  /* pause scroll when emulator paused */
+  body.paused .scroll-inner{ animation-play-state: paused; }
+
+  .row-style{ display:grid; font-size:38px; margin-bottom:20px; align-items:center; color:#fff; }
+  .hourly-row{ grid-template-columns:240px 100px 560px; }
+  .travel-row{ grid-template-columns:405px 120px 140px 140px; }
+
+  .temp-num{ color:#ffff00; min-width:80px; text-align:right; margin-right:40px; }
+  .wind-num{ min-width:140px; text-align:right; color:#ffff00; }
+  .list-icon{ width:85px; height:auto; image-rendering:pixelated; }
+
+  /* Optional labels */
+  .city-marker{
+    position:absolute; color:#ffff00; font-size:34px; font-weight:bold;
+    text-shadow:3px 3px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000,1px 1px 0 #000;
+    z-index:20; display:none; align-items:center;
+  }
+  .city-marker::before{
+    content:""; display:inline-block; width:14px; height:14px;
+    background:#ffff00; border:2px solid #000; margin-right:10px;
+  }
+
+  /* =========================
+     SCANLINES OVERLAY (toggle)
+  ========================= */
+  #scanlines{
+    pointer-events:none;
+    position:absolute; inset:0;
+    z-index:90;
+    opacity:0.35;
+    mix-blend-mode:overlay;
+    background:
+      repeating-linear-gradient(
+        to bottom,
+        rgba(0,0,0,0.0) 0px,
+        rgba(0,0,0,0.0) 2px,
+        rgba(0,0,0,0.25) 3px
+      );
+    animation: scanFlicker 6s linear infinite;
+  }
+
+  #scanlines::after{
+    content:"";
+    position:absolute; inset:-40%;
+    background: linear-gradient(to bottom,
+      rgba(255,255,255,0.00),
+      rgba(255,255,255,0.04),
+      rgba(255,255,255,0.00)
+    );
+    transform: translateY(-30%);
+    animation: scanRoll 7s linear infinite;
+    opacity:0.7;
+  }
+
+  @keyframes scanFlicker{
+    0%,100%{ opacity:0.33; }
+    35%{ opacity:0.37; }
+    55%{ opacity:0.30; }
+    75%{ opacity:0.40; }
+  }
+  @keyframes scanRoll{
+    0%{ transform: translateY(-35%); }
+    100%{ transform: translateY(35%); }
+  }
+
+  body.scan-off #scanlines{ display:none; }
+</style>
+</head>
+
+<body>
+  <div class="ws-container">
+    <div class="sidebar">
+      <div class="label">LOCATION</div>
+      <input type="text" id="cityInput" placeholder="City, ST or lat,lon" />
+      <button onclick="getWeather(true)">UPDATE</button>
+      <button id="force-refresh-btn" onclick="manualRefresh()">FORCE NWS REFRESH</button>
+
+      <div class="label">AUTO UPDATE</div>
+      <div class="tiny">
+        Polls NWS every <span id="poll-mins">2</span> min<br>
+        Last: <span id="last-update">--</span>
+      </div>
+
+      <div class="label">VISUALS</div>
+      <button id="scan-btn" onclick="toggleScanlines()">SCANLINES: ON</button>
+
+      <div class="label">MUSIC</div>
+      <div id="music-info" style="color:#00ccff; font-size:13px; margin-bottom:5px;">OFFLINE</div>
+      <button id="mute-btn" onclick="toggleMute()">MUTE MUSIC</button>
+
+      <div class="label">CONTROLS</div>
+      <button id="pause-btn" onclick="togglePause()">PAUSE EMULATOR</button>
+
+      <div class="label">PAGES</div>
+      <button class="test-btn" onclick="forcePage('current')">1. CURRENT</button>
+      <button class="test-btn" onclick="forcePage('local-obs')">2. LOCAL OBS</button>
+      <button class="test-btn" onclick="forcePage('hourly')">3. HOURLY</button>
+      <button class="test-btn" onclick="forcePage('travel')">4. TRAVEL</button>
+      <button class="test-btn" onclick="forcePage('regional-obs')">5. REGIONAL OBS</button>
+    </div>
+
+    <div id="ws4000-screen">
+      <div id="loading-screen" class="outline-text">Loading Data...</div>
+      <div id="page-header" class="header outline-text">CURRENT<br />CONDITIONS</div>
+
+      <div id="scanlines"></div>
+
+      <!-- Optional label markers -->
+      <div id="atl-mark" class="city-marker" style="top: 58%; left: 14%;">ATLANTA</div>
+      <div id="sav-mark" class="city-marker" style="top: 72%; left: 24%;">SAVANNAH</div>
+      <div id="clt-mark" class="city-marker" style="top: 38%; left: 66%;">CHARLOTTE</div>
+      <div id="cae-mark" class="city-marker" style="top: 49%; left: 61%;">COLUMBIA</div>
+
+      <div id="current-content">
+        <img id="weather-icon" src="" alt="" />
+        <div class="icon-subtext outline-text" id="wind-subtext">Wind: --</div>
+        <div id="temp-value" class="outline-text">--°</div>
+        <div class="condition-label outline-text" id="cond-text">Loading...</div>
+        <div class="stats-box outline-text" id="stats"></div>
+      </div>
+
+      <div id="obs-table" class="outline-text"><div id="obs-rows"></div></div>
+
+      <div id="hourly-content" class="outline-text">
+        <div class="scroll-window">
+          <div id="hourly-rows" class="scroll-inner"></div>
+        </div>
+      </div>
+
+      <div id="travel-content" class="outline-text">
+        <div class="scroll-window">
+          <div id="travel-rows" class="scroll-inner"></div>
+        </div>
+      </div>
+
+      <div class="location-label outline-text" id="loc-name">--</div>
+    </div>
+  </div>
+
+  <audio id="bg-audio" crossorigin="anonymous"></audio>
+
+<script>
+/* =========================
+   INLINE REGIONS.JSON (single file)
+========================= */
+const REGIONS = {
+  "SOUTHEAST": {
+    "zoom": "25% 65%",
+    "stations": [
+      {"id": "KATL", "name": "ATLANTA", "x": 18, "y": 55},
+      {"id": "KCLT", "name": "CHARLOTTE", "x": 62, "y": 32},
+      {"id": "KSAV", "name": "SAVANNAH", "x": 28, "y": 72},
+      {"id": "KCAE", "name": "COLUMBIA", "x": 55, "y": 48},
+      {"id": "KMYR", "name": "MYRTLE BCH", "x": 72, "y": 58},
+      {"id": "KAGS", "name": "AUGUSTA", "x": 38, "y": 58}
+    ]
+  },
+  "NORTHEAST": {
+    "zoom": "0% 100%",
+    "stations": [
+      {"id": "KJFK", "name": "NEW YORK", "x": 80, "y": 45},
+      {"id": "KBOS", "name": "BOSTON", "x": 92, "y": 28},
+      {"id": "KPHL", "name": "PHILA", "x": 75, "y": 52},
+      {"id": "KDCA", "name": "WASH DC", "x": 68, "y": 62}
+    ]
+  },
+  "NORTHWEST": {
+    "zoom": "0% 0%",
+    "stations": [
+      {"id": "KSEA", "name": "SEATTLE", "x": 12, "y": 18},
+      {"id": "KPDX", "name": "PORTLAND", "x": 10, "y": 35},
+      {"id": "KGEG", "name": "SPOKANE", "x": 35, "y": 20}
+    ]
+  },
+  "WEST": {
+    "zoom": "100% 0%",
+    "stations": [
+      {"id": "KSFO", "name": "SAN FRAN", "x": 5, "y": 45},
+      {"id": "KLAX", "name": "LOS ANGELES", "x": 15, "y": 75},
+      {"id": "KPHX", "name": "PHOENIX", "x": 45, "y": 80}
+    ]
+  }
+};
+
+/* =========================
+   GLOBALS / STATE
+========================= */
+const screen = document.getElementById("ws4000-screen");
+const audioPlayer = document.getElementById("bg-audio");
+const musicInfo = document.getElementById("music-info");
+
+let currentCoords = { lat: 35.22, lon: -80.84 };
+let isPaused = false;
+let loopTimer = null;
+let muted = false;
+let scanOn = true;
+
+let pageList = ["current", "local-obs", "hourly", "travel", "regional-obs"];
+let pageIndex = 0;
+
+let hourlyData = [];
+let travelDataCache = [];
+let latestObs = null;
+
+let pointMeta = { forecastHourlyUrl: null, stationsUrl: null };
+let lastForecastUpdateStamp = null;
+let lastObsUpdateStamp = null;
+
+const POLL_MINS = 2;
+document.getElementById("poll-mins").innerText = String(POLL_MINS);
+let pollTimer = null;
+
+let isDaytimeNow = true; // derived from NWS hourly periods[0].isDaytime when available
+
+/* =========================
+   MUSIC (kept simple)
+========================= */
+const safeDefaultPlaylist = [
+  { name: "Catch the Sun", url: "https://raw.githubusercontent.com/netbymatt/ws4kp-music/main/Catch%20the%20Sun.mp3" },
+  { name: "Crisp Day", url: "https://raw.githubusercontent.com/netbymatt/ws4kp-music/main/Crisp%20day.mp3" },
+  { name: "Downpour", url: "https://raw.githubusercontent.com/netbymatt/ws4kp-music/main/Downpour.mp3" },
+  { name: "Fall Colors", url: "https://raw.githubusercontent.com/netbymatt/ws4kp-music/main/Fall%20colors.mp3" },
+  { name: "Moonlit Sky", url: "https://raw.githubusercontent.com/netbymatt/ws4kp-music/main/Moonlit%20sky.mp3" },
+  { name: "Rolling Clouds", url: "https://raw.githubusercontent.com/netbymatt/ws4kp-music/main/Rolling%20Clouds.mp3" },
+  { name: "Spring Shower", url: "https://raw.githubusercontent.com/netbymatt/ws4kp-music/main/Spring%20Shower.mp3" },
+  { name: "Strong Breeze", url: "https://raw.githubusercontent.com/netbymatt/ws4kp-music/main/Strong%20Breeze.mp3" }
+];
+let playlist = [...safeDefaultPlaylist];
+let shuffledQueue = [];
+let currentMusicIndex = 0;
+let musicStarted = false;
+
+function shuffleMusic() { shuffledQueue = [...playlist].sort(() => Math.random() - 0.5); currentMusicIndex = 0; }
+function playNextTrack() {
+  if (!shuffledQueue.length || currentMusicIndex >= shuffledQueue.length) shuffleMusic();
+  const track = shuffledQueue[currentMusicIndex++];
+  audioPlayer.src = track.url;
+  audioPlayer.muted = muted;
+  audioPlayer.play()
+    .then(() => { musicInfo.innerText = (track.name || "PLAYING").toUpperCase(); })
+    .catch(() => { musicInfo.innerText = "CLICK UPDATE FOR AUDIO"; });
+}
+audioPlayer.onended = playNextTrack;
+function toggleMute() {
+  muted = !muted;
+  audioPlayer.muted = muted;
+  document.getElementById("mute-btn").innerText = muted ? "UNMUTE MUSIC" : "MUTE MUSIC";
+}
+
+/* =========================
+   SCANLINES TOGGLE
+========================= */
+function toggleScanlines() {
+  scanOn = !scanOn;
+  document.body.classList.toggle("scan-off", !scanOn);
+  document.getElementById("scan-btn").innerText = scanOn ? "SCANLINES: ON" : "SCANLINES: OFF";
+  document.getElementById("scan-btn").style.background = scanOn ? "#0b3" : "#555";
+}
+
+/* =========================
+   CORE UTILITIES
+========================= */
+function startLoop() {
+  if (isPaused) return;
+  clearTimeout(loopTimer);
+  loopTimer = setTimeout(nextPage, 8000);
+}
+function nextPage() {
+  if (isPaused) return;
+  pageIndex = (pageIndex + 1) % pageList.length;
+  setPage(pageList[pageIndex]);
+  startLoop();
+}
+function togglePause() {
+  isPaused = !isPaused;
+  document.body.classList.toggle("paused", isPaused);
+  const btn = document.getElementById("pause-btn");
+  btn.innerText = isPaused ? "RESUME EMULATOR" : "PAUSE EMULATOR";
+  if (isPaused) clearTimeout(loopTimer);
+  else startLoop();
+}
+function forcePage(page) {
+  clearTimeout(loopTimer);
+  pageIndex = Math.max(0, pageList.indexOf(page));
+  setPage(page);
+  startLoop();
+}
+function showOnly(idsToShow) {
+  const all = ["current-content", "obs-table", "hourly-content", "travel-content"];
+  all.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = idsToShow.includes(id) ? "block" : "none";
+  });
+}
+
+/* =========================
+   ICON LOGIC (your rules)
+   - Day: "partly sunny" -> mostly cloudy
+   - Day: "partly cloudy" -> mostly sunny
+   - Night: clear icons only if truly night (NWS isDaytime=false)
+   - Night: partly clear -> mostly cloudy
+   - Night: mostly clear -> partly cloudy
+========================= */
+function iconUrl(name, isList=false) {
+  const base = isList ? "https://wsbylunv.neocities.org/yea/folder/" : "https://wsbylunv.neocities.org/yea/";
+  return base + name;
+}
+
+function getGifName(descRaw, isList=false, isDay=true) {
+  const d = (descRaw || "").toLowerCase();
+
+  // precipitation / thunder first
+  if (d.includes("thunder") || d.includes("t-storm") || d.includes("tstorm")) return iconUrl("Scattered-Tstorms-1992.gif", isList);
+  if (d.includes("snow")) return iconUrl("Snow.gif", isList);
+  if (d.includes("rain") || d.includes("showers") || d.includes("drizzle")) return iconUrl("Rain-1992.gif", isList);
+
+  // cloudiness buckets with your remaps
+  const hasPartlySunny = d.includes("partly sunny");
+  const hasPartlyCloudy = d.includes("partly cloudy") || d.includes("partly") && d.includes("cloud");
+  const hasMostlyClear = d.includes("mostly clear");
+  const hasMostlyCloudy = d.includes("mostly cloudy");
+  const hasClear = d.includes("clear") || d.includes("sunny") || d.includes("fair");
+  const hasCloudy = d.includes("cloudy") || d.includes("overcast");
+
+  if (!isDay) {
+    // Night rules
+    if (hasClear && !hasPartlyCloudy && !hasMostlyCloudy && !hasCloudy) return iconUrl("Clear.gif", isList);
+    if (d.includes("partly clear")) return iconUrl("Mostly-Cloudy-1992.gif", isList);  // your rule
+    if (hasMostlyClear) return iconUrl("Partly-Cloudy.gif", isList);                    // your rule
+    if (hasPartlyCloudy) return iconUrl("Mostly-Cloudy-1992.gif", isList);              // keep it cloudier at night
+  }
+
+  // Day rules
+  if (hasPartlySunny) return iconUrl("Mostly-Cloudy-1992.gif", isList);                 // your rule
+  if (hasPartlyCloudy) return iconUrl("Mostly-Sunny.gif", isList);                      // your rule
+  if (hasMostlyCloudy) return iconUrl("Mostly-Cloudy-1992.gif", isList);
+  if (hasCloudy) return iconUrl("Cloudy.gif", isList);
+  if (hasClear) return iconUrl("Sunny.gif", isList);
+
+  return iconUrl("Cloudy.gif", isList);
+}
+
+/* =========================
+   UNIT HELPERS
+========================= */
+function mphFromKph(kph) { if (kph == null || Number.isNaN(kph)) return null; return Math.round(kph * 0.621371); }
+function fFromC(c) { if (c == null || Number.isNaN(c)) return null; return Math.round((c * 9/5) + 32); }
+function ftFromM(m) { if (m == null || Number.isNaN(m)) return null; return Math.round(m * 3.28084); }
+
+function calcWindChillF(tempF, windMph) {
+  if (tempF == null || windMph == null) return null;
+  if (tempF > 50) return null;
+  if (windMph <= 3) return null;
+  const v16 = Math.pow(windMph, 0.16);
+  const wc = 35.74 + 0.6215*tempF - 35.75*v16 + 0.4275*tempF*v16;
+  return Math.round(wc);
+}
+
+function ceilingFromObs(obsProps) {
+  const layers = obsProps?.cloudLayers;
+  if (!Array.isArray(layers) || !layers.length) return "--";
+  const ceilingKinds = new Set(["BKN", "OVC", "VV"]);
+  const ceilingLayers = layers
+    .filter(l => ceilingKinds.has((l?.amount || "").toUpperCase()) && l?.base?.value != null)
+    .map(l => ftFromM(l.base.value))
+    .filter(v => v != null);
+  if (!ceilingLayers.length) return "UNLM";
+  return Math.min(...ceilingLayers) + " FT";
+}
+
+/* =========================
+   MORE ACCURATE REGIONAL PAN + MORE ZOOM
+========================= */
+const BASEMAP_BOUNDS = { minLon:-125.0, maxLon:-66.5, minLat:24.0, maxLat:49.5 };
+const BASEMAP_ZOOM = 560;
+const OFFSET_X_PCT = 0;
+const OFFSET_Y_PCT = 0;
+
+function clamp(n, a, b) { return Math.min(b, Math.max(a, n)); }
+function mercY(latDeg) {
+  const lat = clamp(latDeg, -85, 85) * Math.PI / 180;
+  return Math.log(Math.tan(Math.PI / 4 + lat / 2));
+}
+function latLonToBasemapPosition(lat, lon) {
+  const xNorm = (lon - BASEMAP_BOUNDS.minLon) / (BASEMAP_BOUNDS.maxLon - BASEMAP_BOUNDS.minLon);
+  const yMin = mercY(BASEMAP_BOUNDS.minLat);
+  const yMax = mercY(BASEMAP_BOUNDS.maxLat);
+  const yNow = mercY(lat);
+  const yNorm = (yMax - yNow) / (yMax - yMin);
+  const edge = clamp((100 / BASEMAP_ZOOM) * 160, 1.5, 10);
+  const xPct = clamp(xNorm * 100 + OFFSET_X_PCT, edge, 100 - edge);
+  const yPct = clamp(yNorm * 100 + OFFSET_Y_PCT, edge, 100 - edge);
+  return { xPct, yPct };
+}
+
+/* =========================
+   REGION SELECT (auto)
+========================= */
+function pickRegionByLatLon(lat, lon) {
+  if (lon >= -95 && lat >= 36) return "NORTHEAST";
+  if (lon < -110) return "WEST";
+  if (lon < -105 && lat >= 42) return "NORTHWEST";
+  return "SOUTHEAST";
+}
+let activeRegionName = "SOUTHEAST";
+function activeRegion() { return REGIONS[activeRegionName] || REGIONS.SOUTHEAST; }
+
+/* =========================
+   PAGE RENDERERS
+========================= */
+function setMarkersVisible(on) {
+  ["atl-mark","sav-mark","clt-mark","cae-mark"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = on ? "flex" : "none";
+  });
+}
+
+function setPage(page) {
+  screen.classList.remove("travel-bg", "regional-bg");
+  setMarkersVisible(false);
+
+  if (page === "current") {
+    document.getElementById("page-header").innerHTML = "CURRENT<br>CONDITIONS";
+    showOnly(["current-content"]);
+  } else if (page === "local-obs") {
+    document.getElementById("page-header").innerHTML = "LOCAL<br>OBSERVATIONS";
+    showOnly(["obs-table"]);
+    renderLocalObs();
+  } else if (page === "hourly") {
+    document.getElementById("page-header").innerHTML = "HOURLY<br>FORECAST";
+    showOnly(["hourly-content"]);
+    renderHourly();
+  } else if (page === "travel") {
+    document.getElementById("page-header").innerHTML = "TRAVEL<br>FORECAST";
+    screen.classList.add("travel-bg");
+    showOnly(["travel-content"]);
+    renderTravel();
+  } else if (page === "regional-obs") {
+    document.getElementById("page-header").innerHTML = "REGIONAL<br>OBSERVATIONS";
+    screen.classList.add("regional-bg");
+    showOnly(["obs-table"]);
+    setMarkersVisible(true);
+
+    const { xPct, yPct } = latLonToBasemapPosition(currentCoords.lat, currentCoords.lon);
+    screen.style.backgroundPosition = `center, ${xPct}% ${yPct}%`;
+    screen.style.backgroundSize = `100% 100%, ${BASEMAP_ZOOM}%`;
+
+    updateRegionalDisplay();
+  }
+}
+
+function renderLocalObs() {
+  const obsRows = document.getElementById("obs-rows");
+  if (!latestObs) {
+    obsRows.innerHTML = `<div style="padding:40px;">NO OBSERVATION DATA YET.</div>`;
+    return;
+  }
+
+  const windMph = latestObs.windSpeed?.value == null ? null : mphFromKph(latestObs.windSpeed.value);
+  const windDir = latestObs.windDirection?.value == null ? "--" : Math.round(latestObs.windDirection.value) + "°";
+
+  const items = [
+    ["TEMPERATURE", (latestObs.temperature?.value != null) ? (fFromC(latestObs.temperature.value) + "°") : "--"],
+    ["DEWPOINT", (latestObs.dewpoint?.value != null) ? (fFromC(latestObs.dewpoint.value) + "°") : "--"],
+    ["HUMIDITY", (latestObs.relativeHumidity?.value != null) ? (Math.round(latestObs.relativeHumidity.value) + "%") : "--"],
+    ["WIND", (windMph != null) ? (windMph + " MPH") : "--"],
+    ["DIRECTION", windDir],
+    ["PRESSURE", (latestObs.barometricPressure?.value != null) ? (Math.round(latestObs.barometricPressure.value/100) + " MB") : "--"],
+    ["CEILING", ceilingFromObs(latestObs)]
+  ];
+
+  obsRows.innerHTML = items.map(([label, val]) => `
+    <div class="obs-row">
+      <div>${label}</div>
+      <div></div>
+      <div></div>
+      <div style="text-align:right;">${val}</div>
+    </div>
+  `).join("");
+}
+
+function renderHourly() {
+  const wrap = document.getElementById("hourly-rows");
+  if (!hourlyData?.length) { wrap.innerHTML = `<div style="padding:40px;">NO HOURLY DATA YET.</div>`; return; }
+
+  const slice = hourlyData.slice(0, 10);
+  const html = slice.map(p => {
+    const time = new Date(p.startTime).toLocaleTimeString([], { hour:"numeric", minute:"2-digit" }).toUpperCase();
+    const isDay = (p.isDaytime !== undefined) ? !!p.isDaytime : isDaytimeNow;
+    const icon = getGifName(p.shortForecast, true, isDay);
+    return `
+      <div class="row-style hourly-row">
+        <div>${time}</div>
+        <div style="display:flex; justify-content:center;"><img class="list-icon" src="${icon}" alt=""></div>
+        <div style="display:flex; justify-content:space-between;">
+          <div>${(p.shortForecast || "").toUpperCase()}</div>
+          <div class="temp-num">${p.temperature}°</div>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  // duplicate to make seamless loop
+  wrap.innerHTML = html + html;
+}
+
+function renderTravel() {
+  const wrap = document.getElementById("travel-rows");
+  if (!travelDataCache?.length) { wrap.innerHTML = `<div style="padding:40px;">LOADING TRAVEL CITIES...</div>`; return; }
+
+  const html = travelDataCache.map(row => `
+    <div class="row-style travel-row">
+      <div>${row.city}</div>
+      <div style="display:flex; justify-content:center;"><img class="list-icon" src="${row.icon}" alt=""></div>
+      <div class="temp-num">${row.temp}°</div>
+      <div class="wind-num">${row.wind}</div>
+    </div>
+  `).join("");
+
+  wrap.innerHTML = html + html;
+}
+
+async function updateRegionalDisplay() {
+  if (!activeRegion()?.stations?.length) {
+    document.getElementById("obs-table").innerHTML = `<div style="padding:40px; color:red;">REGION DATA MISSING</div>`;
+    return;
+  }
+
+  try {
+    const obsTable = document.getElementById("obs-table");
+    obsTable.innerHTML = "";
+
+    const promises = activeRegion().stations.map(st =>
+      fetch(`https://api.weather.gov/stations/${st.id}/observations/latest`, { cache: "no-store" })
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(data => {
+          const tC = data?.properties?.temperature?.value;
+          const tF = (tC != null) ? fFromC(tC) : "--";
+          const desc = data?.properties?.textDescription || "Cloudy";
+          // night/day for regional: use current city's day/night
+          return { ...st, temp: tF, icon: getGifName(desc, true, isDaytimeNow) };
+        })
+        .catch(() => ({ ...st, temp: "--", icon: getGifName("Cloudy", true, isDaytimeNow) }))
+    );
+
+    const results = await Promise.all(promises);
+
+    obsTable.innerHTML = results.map(st => `
+      <div style="position:absolute; left:${st.x}%; top:${st.y}%; transform:translate(-50%,-50%);
+                  display:flex; flex-direction:column; align-items:center; z-index:25;">
+        <div style="color:white; font-size:36px; font-weight:bold; text-shadow:2px 2px #000;">${st.temp}</div>
+        <img src="${st.icon}" style="width:55px; height:auto; image-rendering:pixelated;">
+        <div style="color:#ffff00; font-size:18px; text-shadow:1px 1px #000;">${st.name}</div>
+      </div>
+    `).join("");
+  } catch (e) {
+    console.error(e);
+    document.getElementById("obs-table").innerHTML = `<div style="padding:40px; color:red;">REGIONAL LOAD FAILED</div>`;
+  }
+}
+
+/* =========================
+   DATA FETCH
+   - accepts "lat,lon" OR "City, ST"
+   - City geocode uses Nominatim (NWS has no city->lat/lon endpoint)
+========================= */
+async function parseInputToLatLon(input) {
+  const raw = (input || "").trim();
+  const m = raw.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+  if (m) return { lat: parseFloat(m[1]), lon: parseFloat(m[2]), label: raw.toUpperCase() };
+
+  // fallback: Nominatim city search
+  const geo = await (await fetch(
+    `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(raw)}`,
+    { headers: { "Accept": "application/json" } }
+  )).json();
+
+  if (!geo?.length) throw new Error("No geocode results. Try lat,lon like 35.22,-80.84");
+  return { lat: parseFloat(geo[0].lat), lon: parseFloat(geo[0].lon), label: raw.toUpperCase() };
+}
+
+async function getWeather(showLoader) {
+  const cityInput = document.getElementById("cityInput").value || "Charlotte, NC";
+  const loader = document.getElementById("loading-screen");
+
+  if (showLoader) {
+    loader.innerText = "Loading Data...";
+    loader.style.display = "flex";
+  }
+
+  if (!musicStarted) { shuffleMusic(); playNextTrack(); musicStarted = true; }
+  else { audioPlayer.muted = muted; audioPlayer.play().catch(()=>{}); }
+
+  try {
+    const loc = await parseInputToLatLon(cityInput);
+    currentCoords = { lat: loc.lat, lon: loc.lon };
+    document.getElementById("loc-name").innerText = loc.label;
+
+    activeRegionName = pickRegionByLatLon(currentCoords.lat, currentCoords.lon);
+
+    const pData = await (await fetch(`https://api.weather.gov/points/${currentCoords.lat},${currentCoords.lon}`, { cache:"no-store" })).json();
+    pointMeta.forecastHourlyUrl = pData?.properties?.forecastHourly || null;
+    pointMeta.stationsUrl = pData?.properties?.observationStations || null;
+
+    await refreshNwsData(true);
+
+    if (showLoader) loader.style.display = "none";
+    setPage("current");
+    pageIndex = 0;
+    startLoop();
+
+    startPolling();
+  } catch (e) {
+    console.error(e);
+    if (showLoader) loader.innerText = "Error Loading Data";
+  }
+}
+
+async function refreshNwsData(forceRepaint) {
+  if (!pointMeta.forecastHourlyUrl) return;
+
+  const wData = await (await fetch(pointMeta.forecastHourlyUrl, { cache:"no-store" })).json();
+  const periods = wData?.properties?.periods || [];
+  hourlyData = periods;
+
+  // set true night/day from NWS
+  if (periods?.[0]?.isDaytime !== undefined) isDaytimeNow = !!periods[0].isDaytime;
+
+  const newForecastStamp = periods?.[0]?.startTime || null;
+
+  await refreshObservation();
+
+  const changed =
+    (newForecastStamp && newForecastStamp !== lastForecastUpdateStamp) ||
+    (lastObsUpdateStamp && lastObsUpdateStamp !== (latestObs?.timestamp || latestObs?.observationTime || null));
+
+  if (forceRepaint || changed) {
+    lastForecastUpdateStamp = newForecastStamp || lastForecastUpdateStamp;
+    updateCurrentConditionsBox();
+    if (pageList[pageIndex] === "hourly") renderHourly();
+    if (pageList[pageIndex] === "local-obs") renderLocalObs();
+    if (pageList[pageIndex] === "travel") renderTravel();
+    if (pageList[pageIndex] === "regional-obs") updateRegionalDisplay();
+  }
+
+  const now = new Date();
+  document.getElementById("last-update").innerText = now.toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" });
+}
+
+async function refreshObservation() {
+  if (!pointMeta.stationsUrl) return;
+
+  const stationsData = await (await fetch(pointMeta.stationsUrl, { cache:"no-store" })).json();
+  const firstStation = stationsData?.features?.[0]?.properties?.stationIdentifier;
+  if (!firstStation) { latestObs = null; return; }
+
+  const obsData = await (await fetch(`https://api.weather.gov/stations/${firstStation}/observations/latest`, { cache:"no-store" })).json();
+  latestObs = obsData?.properties || null;
+  lastObsUpdateStamp = latestObs?.timestamp || latestObs?.observationTime || lastObsUpdateStamp;
+}
+
+function updateCurrentConditionsBox() {
+  const now = hourlyData?.[0];
+  if (!now) return;
+
+  const tempF = now.temperature ?? null;
+  const windTxt = (now.windSpeed && now.windDirection) ? `Wind: ${now.windDirection} ${now.windSpeed}` : "Wind: --";
+  document.getElementById("wind-subtext").innerText = windTxt;
+
+  document.getElementById("temp-value").innerText = (tempF != null ? tempF : "--") + "°";
+  document.getElementById("cond-text").innerText = (now.shortForecast || "—").toUpperCase();
+
+  const icon = getGifName(now.shortForecast, false, isDaytimeNow);
+  document.getElementById("weather-icon").src = icon;
+
+  let windMph = null;
+  if (latestObs?.windSpeed?.value != null) windMph = mphFromKph(latestObs.windSpeed.value);
+  else if (typeof now.windSpeed === "string") {
+    const m = now.windSpeed.match(/(\d+)/);
+    if (m) windMph = parseInt(m[1], 10);
+  }
+
+  const wc = calcWindChillF(tempF, windMph);
+  const ceiling = ceilingFromObs(latestObs);
+
+  const stats = document.getElementById("stats");
+  const rh = (latestObs?.relativeHumidity?.value != null) ? (Math.round(latestObs.relativeHumidity.value) + "%") : "--";
+  const dp = (latestObs?.dewpoint?.value != null) ? (fFromC(latestObs.dewpoint.value) + "°") : "--";
+  const pres = (latestObs?.barometricPressure?.value != null) ? (Math.round(latestObs.barometricPressure.value/100) + " MB") : "--";
+
+  stats.innerHTML =
+    `HUMIDITY: ${rh}<br>` +
+    `DEWPOINT: ${dp}<br>` +
+    `PRESS: ${pres}<br>` +
+    `CEILING: ${ceiling}<br>` +
+    `WIND CHILL: ${wc != null ? (wc + "°") : "--"}`;
+}
+
+function startPolling() {
+  clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    try { await refreshNwsData(false); } catch (e) { console.error(e); }
+  }, POLL_MINS * 60 * 1000);
+}
+async function manualRefresh() {
+  try { await refreshNwsData(true); } catch (e) { console.error(e); }
+}
+
+/* =========================
+   TRAVEL CITIES (fixed list)
+========================= */
+async function loadTravelCities(list) {
+  const out = [];
+  for (const item of list) {
+    try {
+      const geo = await (await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(item.q)}`,
+        { headers: { "Accept": "application/json" } }
+      )).json();
+
+      if (!geo?.length) throw new Error("no geo");
+      const lat = parseFloat(geo[0].lat), lon = parseFloat(geo[0].lon);
+
+      const pData = await (await fetch(`https://api.weather.gov/points/${lat},${lon}`, { cache:"no-store" })).json();
+      const wData = await (await fetch(pData.properties.forecastHourly, { cache:"no-store" })).json();
+      const now = wData?.properties?.periods?.[0];
+
+      const temp = now?.temperature ?? "--";
+      const isDay = (now?.isDaytime !== undefined) ? !!now.isDaytime : true;
+      const icon = getGifName(now?.shortForecast || "Cloudy", true, isDay);
+      const wind = (now?.windDirection && now?.windSpeed) ? `${now.windDirection} ${now.windSpeed}` : "--";
+
+      out.push({ city: item.city, temp, icon, wind });
+    } catch {
+      out.push({ city: item.city, temp: "--", icon: getGifName("Cloudy", true, true), wind: "--" });
+    }
+  }
+  return out;
+}
+
+/* =========================
+   INIT
+========================= */
+window.onload = async () => {
+  document.body.classList.toggle("scan-off", !scanOn);
+
+  travelDataCache = await loadTravelCities([
+    { city:"NEW YORK, NY", q:"New York, NY" },
+    { city:"CHICAGO, IL", q:"Chicago, IL" },
+    { city:"DALLAS, TX", q:"Dallas, TX" },
+    { city:"DENVER, CO", q:"Denver, CO" },
+    { city:"SEATTLE, WA", q:"Seattle, WA" },
+    { city:"MIAMI, FL", q:"Miami, FL" }
+  ]);
+
+  setPage("current");
+  document.getElementById("cityInput").value = "Charlotte, NC";
+  getWeather(true);
+};
+</script>
+</body>
+</html>
