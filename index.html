@@ -58,7 +58,12 @@
     }
     /* ============================================================ */
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Star4000', sans-serif !important;
+    }
 
     body {
       background: #111;
@@ -78,7 +83,8 @@
     }
 
     /* Force Star4000 on absolutely everything */
-    #screen, #screen * {
+    html, body, #screen, #screen *,
+    input, button, span, div, p {
       font-family: 'Star4000', sans-serif !important;
     }
 
