@@ -7,6 +7,11 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;700&display=swap');
 
+    @font-face {
+      font-family: 'Star4000';
+      src: url('https://wsbylunv.neocities.org/star4000.ttf') format('truetype');
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
@@ -15,7 +20,7 @@
       align-items: center;
       justify-content: center;
       min-height: 100vh;
-      font-family: 'Titillium Web', sans-serif;
+      font-family: 'Star4000', sans-serif;
     }
 
     /* The screen is sized to match the bg image proportions (800x500 scaled to 640x400) */
@@ -27,14 +32,13 @@
       overflow: hidden;
     }
 
-    /* ── CLOCK & DATE — top right of orange bar ── */
+    /* ── CLOCK & DATE ── */
     #clock {
       position: absolute;
-      top: 10px;
-      right: 14px;
+      top: calc(10px + 350px);
+      right: calc(14px + 250px);
       text-align: right;
       color: #fff;
-      font-weight: 700;
       line-height: 1.3;
     }
     #clock .time { font-size: 1.25rem; }
@@ -43,72 +47,78 @@
     /* ── MAIN PANEL TEXT — overlaid on the blue box ── */
     /* Blue panel sits roughly from y=18% to y=80% */
 
-    /* City name — top right inside blue panel */
+    /* City name */
     #city-name {
       position: absolute;
       top: 22%;
-      right: 5%;
+      right: calc(5% + 50px);
       color: #ffe600;
-      font-size: 1.25rem;
-      font-weight: 700;
+      font-size: calc(1.25rem + 75px);
       text-align: right;
-      max-width: 45%;
+      max-width: 55%;
     }
 
-    /* Temp — top left inside blue panel */
+    /* Temp */
     #cur-temp {
       position: absolute;
-      top: 20%;
-      left: 5%;
+      top: calc(20% + 100px);
+      left: calc(5% + 250px);
       color: #fff;
       font-size: 2.8rem;
-      font-weight: 700;
       line-height: 1;
     }
 
     /* Condition */
     #cur-cond {
       position: absolute;
-      top: 34%;
-      left: 5%;
+      top: calc(34% + 125px);
+      left: calc(5% + 250px);
       color: #fff;
       font-size: 1.3rem;
-      font-weight: 400;
     }
 
     /* Wind */
     #cur-wind {
       position: absolute;
       top: 63%;
-      left: 5%;
+      left: calc(5% + 250px);
       color: #fff;
       font-size: 1.1rem;
-      font-weight: 700;
     }
     #cur-wind span { font-weight: 400; }
 
-    /* Right side detail rows */
+    /* Detail rows */
     #details {
       position: absolute;
-      top: 22%;
-      right: 5%;
-      width: 44%;
+      top: 31%;
+      right: calc(5% - 100px);
+      width: 60%;
       display: flex;
       flex-direction: column;
-      gap: 3px;
+      gap: 4px;
     }
-    /* push details below the city name */
-    #details { top: 31%; }
 
     .drow {
       display: flex;
-      justify-content: space-between;
+      align-items: baseline;
       color: #fff;
-      font-size: 1rem;
-      font-weight: 400;
+      position: relative;
     }
-    .drow .lbl { font-weight: 700; }
-    .drow .val { color: #fff; }
+    .drow .lbl {
+      position: absolute;
+      left: 100px;
+      font-size: 1.4rem;
+      white-space: nowrap;
+    }
+    .drow .val {
+      position: absolute;
+      right: 350px;
+      font-size: 1.4rem;
+      white-space: nowrap;
+      color: #fff;
+    }
+    /* spacer to give the row height */
+    .drow::after { content: ''; display: inline-block; height: 1.8rem; }
 
     /* ── BOTTOM BAR TEXT ── */
     #bottom-text {
@@ -140,7 +150,7 @@
       background: rgba(0,0,20,0.85);
       border: 2px solid #4af;
       color: #4af;
-      font-family: 'Titillium Web', sans-serif;
+      font-family: 'Star4000', sans-serif;
       font-size: 1rem;
       padding: 6px 14px;
       outline: none;
@@ -153,8 +163,7 @@
       background: #1a3fc4;
       color: #fff;
       border: 2px solid #4af;
-      font-family: 'Titillium Web', sans-serif;
-      font-weight: 700;
+      font-family: 'Star4000', sans-serif;
       font-size: 1rem;
       padding: 6px 20px;
       cursor: pointer;
@@ -163,7 +172,7 @@
 
     #status-msg {
       color: #4af;
-      font-family: 'Titillium Web', sans-serif;
+      font-family: 'Star4000', sans-serif;
       font-size: 0.9rem;
       letter-spacing: 2px;
       min-height: 1.2em;
@@ -204,8 +213,7 @@
       cursor: pointer;
     }
   </style>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+
 </head>
 <body>
 <div id="screen">
