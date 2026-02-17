@@ -7,7 +7,7 @@
   <style>
     @font-face {
       font-family: 'Star4000';
-      src: url('Star4000.ttf') format('truetype');
+      src: url('https://wsbylunv.neocities.org/Star4000.ttf') format('truetype');
     }
 
     /* ============================================================
@@ -344,6 +344,16 @@ function updateClock() {
 }
 updateClock();
 setInterval(updateClock, 1000);
+
+// Nuclear font force
+const style = document.createElement('style');
+style.textContent = '* { font-family: "Star4000", sans-serif !important; }';
+document.head.appendChild(style);
+document.fonts.load('1em Star4000').then(() => {
+  document.querySelectorAll('*').forEach(el => {
+    el.style.setProperty('font-family', 'Star4000, sans-serif', 'important');
+  });
+});
 
 function setStatus(msg, isError=false, blink=false) {
   const el = document.getElementById('status-msg');
