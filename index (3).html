@@ -1,409 +1,246 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>WeatherSTAR 4000+</title>
-  <style>
-    @font-face {
-      font-family: 'Star4000';
-      src: url('https://wsbylunv.neocities.org/Star4000.ttf') format('truetype');
-    }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>WeatherSTAR 4000+</title>
 
-    /* ============================================================
-       TWEAK THESE VALUES TO MOVE THINGS AROUND
-       ============================================================ */
-    :root {
-      /* Clock */
-      --clock-top:   8px;
-      --clock-right: 12px;
+<style>
+@font-face {
+  font-family: 'Star4000';
+  src: url('https://wsbylunv.neocities.org/Star4000.ttf') format('truetype');
+  font-display: block;
+}
 
-      /* City name */
-      --city-top:    100px;
-      --city-right:  20px;
-      --city-size:   1.3rem;
+/* ============================================================ */
+:root {
+  --clock-top:   8px;
+  --clock-right: 12px;
+  --city-top:    100px;
+  --city-right:  20px;
+  --city-size:   1.3rem;
+  --temp-top:    130px;
+  --temp-left:   32px;
+  --temp-size:   2.8rem;
+  --cond-top:    210px;
+  --cond-left:   32px;
+  --cond-size:   1.3rem;
+  --wind-top:    310px;
+  --wind-left:   32px;
+  --wind-size:   1.1rem;
+  --details-top: 105px;
+  --details-left:310px;
+  --lbl-left:    0px;
+  --lbl-size:    1.1rem;
+  --val-offset:  160px;
+  --val-size:    1.1rem;
+  --row-height:  1.9rem;
+  --bottom-size: 1.1rem;
+}
+/* ============================================================ */
 
-      /* Temperature */
-      --temp-top:    130px;
-      --temp-left:   32px;
-      --temp-size:   2.8rem;
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: "Star4000", sans-serif !important;
+}
 
-      /* Condition (e.g. "Sunny") */
-      --cond-top:    210px;
-      --cond-left:   32px;
-      --cond-size:   1.3rem;
+body {
+  background: #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
 
-      /* Wind */
-      --wind-top:    310px;
-      --wind-left:   32px;
-      --wind-size:   1.1rem;
+#screen {
+  position: relative;
+  width: 640px;
+  height: 512px;
+  background: url('https://wsbylunv.neocities.org/ws4000_bg.png') center/100% 100% no-repeat;
+  background-color: #000a2a;
+  overflow: hidden;
+}
 
-      /* Details block (top-left corner of the whole block) */
-      --details-top:   105px;
-      --details-left:  310px;
+/* CLOCK */
+#clock {
+  position: absolute;
+  top: var(--clock-top);
+  right: var(--clock-right);
+  text-align: right;
+  color: #fff;
+}
+#clock .time { font-size: 1.2rem; }
+#clock .date { font-size: 0.95rem; }
 
-      /* Label column left offset inside details block */
-      --lbl-left:    0px;
-      --lbl-size:    1.1rem;
+/* CITY */
+#city-name {
+  position: absolute;
+  top: var(--city-top);
+  right: var(--city-right);
+  color: #ffe600;
+  font-size: var(--city-size);
+  text-align: right;
+  max-width: 280px;
+}
 
-      /* Value column — how far right of the label */
-      --val-offset:  160px;
-      --val-size:    1.1rem;
+/* TEMP */
+#cur-temp {
+  position: absolute;
+  top: var(--temp-top);
+  left: var(--temp-left);
+  color: #fff;
+  font-size: var(--temp-size);
+}
 
-      /* Row height spacing */
-      --row-height:  1.9rem;
+/* CONDITION */
+#cur-cond {
+  position: absolute;
+  top: var(--cond-top);
+  left: var(--cond-left);
+  color: #fff;
+  font-size: var(--cond-size);
+}
 
-      /* Bottom bar text */
-      --bottom-size: 1.1rem;
-    }
-    /* ============================================================ */
+/* WIND */
+#cur-wind {
+  position: absolute;
+  top: var(--wind-top);
+  left: var(--wind-left);
+  color: #fff;
+  font-size: var(--wind-size);
+}
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Star4000', sans-serif !important;
-    }
+/* DETAILS */
+#details {
+  position: absolute;
+  top: var(--details-top);
+  left: var(--details-left);
+  display: flex;
+  flex-direction: column;
+}
 
-    body {
-      background: #111;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-    }
+.drow {
+  position: relative;
+  height: var(--row-height);
+  color: #fff;
+}
+.drow .lbl {
+  position: absolute;
+  left: var(--lbl-left);
+  font-size: var(--lbl-size);
+}
+.drow .val {
+  position: absolute;
+  left: var(--val-offset);
+  font-size: var(--val-size);
+}
 
-    #screen {
-      position: relative;
-      width: 640px;
-      height: 512px;
-      background: url('https://wsbylunv.neocities.org/ws4000_bg.png') center center / 100% 100% no-repeat;
-      background-color: #000a2a;
-      overflow: hidden;
-    }
+/* BOTTOM */
+#bottom-text {
+  position: absolute;
+  bottom: 18px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: #fff;
+  font-size: var(--bottom-size);
+}
 
-    /* Force Star4000 on absolutely everything */
-    html, body, #screen, #screen *,
-    input, button, span, div, p {
-      font-family: 'Star4000', sans-serif !important;
-    }
+/* SEARCH */
+#search-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  z-index: 20;
+}
 
-    /* ── CLOCK ── */
-    #clock {
-      position: absolute;
-      top: var(--clock-top);
-      right: var(--clock-right);
-      text-align: right;
-      color: #fff;
-      line-height: 1.3;
-    }
-    #clock .time { font-size: 1.2rem; }
-    #clock .date { font-size: 0.95rem; }
+#search-overlay input,
+#inline-search input {
+  background: rgba(0,0,20,0.85);
+  border: 2px solid #4af;
+  color: #4af;
+  font-size: 1rem;
+  padding: 6px 14px;
+  outline: none;
+}
 
-    /* ── CITY NAME ── */
-    #city-name {
-      position: absolute;
-      top: var(--city-top);
-      right: var(--city-right);
-      color: #ffe600;
-      font-size: var(--city-size);
-      text-align: right;
-      max-width: 280px;
-    }
+#search-overlay button,
+#inline-search button {
+  background: #1a3fc4;
+  color: #fff;
+  border: 2px solid #4af;
+  font-size: 1rem;
+  padding: 6px 20px;
+  cursor: pointer;
+}
 
-    /* ── TEMPERATURE ── */
-    #cur-temp {
-      position: absolute;
-      top: var(--temp-top);
-      left: var(--temp-left);
-      color: #fff;
-      font-size: var(--temp-size);
-      line-height: 1;
-    }
+.blink { animation: blink 1.1s step-end infinite; }
+@keyframes blink { 50% { opacity: 0; } }
 
-    /* ── CONDITION ── */
-    #cur-cond {
-      position: absolute;
-      top: var(--cond-top);
-      left: var(--cond-left);
-      color: #fff;
-      font-size: var(--cond-size);
-    }
-
-    /* ── WIND ── */
-    #cur-wind {
-      position: absolute;
-      top: var(--wind-top);
-      left: var(--wind-left);
-      color: #fff;
-      font-size: var(--wind-size);
-    }
-
-    /* ── DETAIL ROWS ── */
-    #details {
-      position: absolute;
-      top: var(--details-top);
-      left: var(--details-left);
-      display: flex;
-      flex-direction: column;
-    }
-
-    .drow {
-      position: relative;
-      height: var(--row-height);
-      color: #fff;
-    }
-    .drow .lbl {
-      position: absolute;
-      left: var(--lbl-left);
-      top: 0;
-      font-size: var(--lbl-size);
-      white-space: nowrap;
-    }
-    .drow .val {
-      position: absolute;
-      left: var(--val-offset);
-      top: 0;
-      font-size: var(--val-size);
-      white-space: nowrap;
-    }
-
-    /* ── BOTTOM BAR ── */
-    #bottom-text {
-      position: absolute;
-      bottom: 18px;
-      left: 0;
-      right: 0;
-      text-align: center;
-      color: #fff;
-      font-size: var(--bottom-size);
-    }
-
-    /* ── SEARCH OVERLAY (idle) ── */
-    #search-overlay {
-      position: absolute;
-      inset: 0;
-      background: rgba(0,0,0,0.6);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 14px;
-      z-index: 20;
-    }
-    #search-overlay input {
-      background: rgba(0,0,20,0.85);
-      border: 2px solid #4af;
-      color: #4af;
-      font-size: 1rem;
-      padding: 6px 14px;
-      outline: none;
-      width: 260px;
-    }
-    #search-overlay input::placeholder { color: #336; }
-    #search-overlay button {
-      background: #1a3fc4;
-      color: #fff;
-      border: 2px solid #4af;
-      font-size: 1rem;
-      padding: 6px 20px;
-      cursor: pointer;
-    }
-    #search-overlay button:hover { background: #4af; color: #000; }
-    #status-msg { color: #4af; font-size: 0.9rem; letter-spacing: 2px; min-height: 1.2em; }
-    #status-msg.error { color: #f44; }
-
-    /* ── INLINE SEARCH (weather view) ── */
-    #inline-search {
-      position: absolute;
-      bottom: 60px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 6px;
-      z-index: 10;
-    }
-    #inline-search input {
-      background: rgba(0,0,20,0.75);
-      border: 1px solid #4af;
-      color: #4af;
-      font-size: 0.85rem;
-      padding: 3px 10px;
-      outline: none;
-      width: 200px;
-    }
-    #inline-search input::placeholder { color: #335; }
-    #inline-search button {
-      background: rgba(26,63,196,0.8);
-      color: #fff;
-      border: 1px solid #4af;
-      font-size: 0.85rem;
-      padding: 3px 10px;
-      cursor: pointer;
-    }
-
-    .blink { animation: blink 1.1s step-end infinite; }
-    @keyframes blink { 50% { opacity: 0; } }
-  </style>
+/* FINAL LOCK (cannot be overridden) */
+html, body, #screen, #screen *,
+input, button, span, div, p {
+  font-family: "Star4000", sans-serif !important;
+}
+</style>
 </head>
+
 <body>
 <div id="screen">
 
-  <!-- Clock always on top -->
-  <div id="clock">
-    <div class="time" id="clock-time">--:-- --</div>
-    <div class="date" id="clock-date">--- --- --</div>
+<!-- Clock -->
+<div id="clock">
+  <div class="time" id="clock-time">--:-- --</div>
+  <div class="date" id="clock-date">--- --- --</div>
+</div>
+
+<!-- Weather Data -->
+<div id="weather-data" style="display:none;">
+  <div id="city-name"></div>
+  <div id="cur-temp"></div>
+  <div id="cur-cond"></div>
+  <div id="cur-wind">Wind: <span id="wind-val"></span></div>
+
+  <div id="details">
+    <div class="drow"><span class="lbl">Humidity:</span><span class="val" id="d-hum"></span></div>
+    <div class="drow"><span class="lbl">Dewpoint:</span><span class="val" id="d-dew"></span></div>
+    <div class="drow"><span class="lbl">Visibility:</span><span class="val" id="d-vis"></span></div>
+    <div class="drow"><span class="lbl">Pressure:</span><span class="val" id="d-pres"></span></div>
+    <div class="drow"><span class="lbl">Heat Index:</span><span class="val" id="d-hi"></span></div>
+    <div class="drow"><span class="lbl">Wind Chill:</span><span class="val" id="d-wc"></span></div>
   </div>
 
-  <!-- Weather data -->
-  <div id="weather-data" style="display:none;">
-    <div id="city-name"></div>
-    <div id="cur-temp"></div>
-    <div id="cur-cond"></div>
-    <div id="cur-wind">Wind: <span id="wind-val"></span></div>
-    <div id="details">
-      <div class="drow"><span class="lbl">Humidity:</span><span class="val" id="d-hum"></span></div>
-      <div class="drow"><span class="lbl">Dewpoint:</span><span class="val" id="d-dew"></span></div>
-      <div class="drow"><span class="lbl">Visibility:</span><span class="val" id="d-vis"></span></div>
-      <div class="drow"><span class="lbl">Pressure:</span><span class="val" id="d-pres"></span></div>
-      <div class="drow"><span class="lbl">Heat Index:</span><span class="val" id="d-hi"></span></div>
-      <div class="drow"><span class="lbl">Wind Chill:</span><span class="val" id="d-wc"></span></div>
-    </div>
-    <div id="bottom-text">Conditions at <span id="bottom-city"></span></div>
-    <div id="inline-search">
-      <input id="city-input2" type="text" placeholder="Search another city..." />
-      <button id="search-btn2">GO</button>
-    </div>
-  </div>
-
-  <!-- Idle search overlay -->
-  <div id="search-overlay">
-    <input id="city-input" type="text" placeholder="ENTER A US CITY..." autocomplete="off" spellcheck="false" />
-    <button id="search-btn">GET FORECAST</button>
-    <div id="status-msg" class="blink">ENTER A CITY TO BEGIN</div>
-  </div>
+  <div id="bottom-text">Conditions at <span id="bottom-city"></span></div>
+</div>
 
 </div>
+
 <script>
-async function getCoordinates(city) {
-  const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city)}&format=json&limit=1`, {
-    headers: { 'User-Agent': 'WS4000Plus-Emulator' }
-  });
-  const data = await res.json();
-  if (!data.length) throw new Error('City not found');
-  return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+async function forceStarFont() {
+  try {
+    await document.fonts.load('1em "Star4000"');
+    await document.fonts.ready;
+
+    document.body.style.setProperty("font-family", '"Star4000", sans-serif', "important");
+
+    const all = document.querySelectorAll('*');
+    for (const el of all) {
+      el.style.setProperty('font-family', '"Star4000", sans-serif', 'important');
+    }
+  } catch (e) {
+    console.warn("Star4000 font force failed:", e);
+  }
 }
 
-async function getWeatherForCity(city) {
-  const { lat, lon } = await getCoordinates(city);
-  const ptRes = await fetch(`https://api.weather.gov/points/${lat.toFixed(4)},${lon.toFixed(4)}`, {
-    headers: { 'User-Agent': 'WS4000Plus-Emulator' }
-  });
-  if (!ptRes.ok) throw new Error('US cities only');
-  const pt = await ptRes.json();
-  const [fRes, sRes] = await Promise.all([
-    fetch(pt.properties.forecast, { headers: { 'User-Agent': 'WS4000Plus-Emulator' } }),
-    fetch(pt.properties.observationStations, { headers: { 'User-Agent': 'WS4000Plus-Emulator' } })
-  ]);
-  const fData = await fRes.json();
-  const sData = await sRes.json();
-  const stationId = sData.features[0].properties.stationIdentifier;
-  const oRes = await fetch(`https://api.weather.gov/stations/${stationId}/observations/latest`, {
-    headers: { 'User-Agent': 'WS4000Plus-Emulator' }
-  });
-  const obs = oRes.ok ? (await oRes.json()).properties : null;
-  const cToF = c => c != null ? Math.round(c * 9/5 + 32) : null;
-  const mToMi = m => m != null ? (m / 1609.34).toFixed(1) : null;
-  const paToInHg = p => p != null ? (p / 3386.39).toFixed(2) : null;
-  const fmt = (v, suf) => v != null ? v + suf : 'N/A';
-  const cur = fData.properties.periods[0];
-  return {
-    location: `${pt.properties.relativeLocation.properties.city}, ${pt.properties.relativeLocation.properties.state}`,
-    temp:      fmt(obs ? cToF(obs.temperature?.value) : cur.temperature, '°'),
-    condition: obs?.textDescription || cur.shortForecast,
-    wind:      cur.windSpeed + ' ' + cur.windDirection,
-    humidity:  fmt(obs?.relativeHumidity?.value != null ? Math.round(obs.relativeHumidity.value) : null, '%'),
-    dewpoint:  fmt(obs?.dewpoint?.value != null ? cToF(obs.dewpoint.value) : null, '°'),
-    visibility:fmt(obs?.visibility?.value != null ? mToMi(obs.visibility.value) : null, ' mi.'),
-    pressure:  fmt(obs?.barometricPressure?.value != null ? paToInHg(obs.barometricPressure.value) : null, ''),
-    heatIndex: fmt(obs?.heatIndex?.value != null ? cToF(obs.heatIndex.value) : null, '°'),
-    windChill: fmt(obs?.windChill?.value != null ? cToF(obs.windChill.value) : null, '°'),
-  };
-}
-
-const DAYS   = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
-const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-function updateClock() {
-  const n = new Date();
-  let h = n.getHours(), m = n.getMinutes(), s = n.getSeconds(), ap = 'AM';
-  if (h >= 12) ap = 'PM';
-  if (h > 12) h -= 12;
-  if (h === 0) h = 12;
-  document.getElementById('clock-time').textContent = `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')} ${ap}`;
-  document.getElementById('clock-date').textContent = `${DAYS[n.getDay()]} ${MONTHS[n.getMonth()]} ${n.getDate()}`;
-}
-updateClock();
-setInterval(updateClock, 1000);
-
-// Nuclear font force
-const style = document.createElement('style');
-style.textContent = '* { font-family: "Star4000", sans-serif !important; }';
-document.head.appendChild(style);
-document.fonts.load('1em Star4000').then(() => {
-  document.querySelectorAll('*').forEach(el => {
-    el.style.setProperty('font-family', 'Star4000, sans-serif', 'important');
-  });
-});
-
-function setStatus(msg, isError=false, blink=false) {
-  const el = document.getElementById('status-msg');
-  el.className = isError ? 'error' : (blink ? 'blink' : '');
-  el.textContent = msg;
-}
-
-function showWeather(data) {
-  document.getElementById('search-overlay').style.display = 'none';
-  document.getElementById('weather-data').style.display  = 'block';
-  document.getElementById('city-name').textContent   = data.location;
-  document.getElementById('cur-temp').textContent    = data.temp;
-  document.getElementById('cur-cond').textContent    = data.condition;
-  document.getElementById('wind-val').textContent    = data.wind;
-  document.getElementById('d-hum').textContent  = data.humidity;
-  document.getElementById('d-dew').textContent  = data.dewpoint;
-  document.getElementById('d-vis').textContent  = data.visibility;
-  document.getElementById('d-pres').textContent = data.pressure;
-  document.getElementById('d-hi').textContent   = data.heatIndex;
-  document.getElementById('d-wc').textContent   = data.windChill;
-  document.getElementById('bottom-city').textContent = data.location;
-}
-
-async function doSearch(cityVal) {
-  const input = (cityVal || document.getElementById('city-input').value).trim();
-  if (!input) return;
-  if (input.toLowerCase() === 'bfdi')      { setStatus('BFDI MODE — COMING SOON', false, true); return; }
-  if (input.toLowerCase() === 'minecraft') { setStatus('MINECRAFT MODE — COMING SOON', false, true); return; }
-  setStatus('FETCHING...', false, true);
-  try { showWeather(await getWeatherForCity(input)); }
-  catch(e) { setStatus(e.message.toUpperCase(), true); }
-}
-
-document.getElementById('search-btn').addEventListener('click', () => doSearch());
-document.getElementById('city-input').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
-document.getElementById('search-btn2').addEventListener('click', () => {
-  const v = document.getElementById('city-input2').value.trim();
-  if (!v) return;
-  document.getElementById('weather-data').style.display = 'none';
-  document.getElementById('search-overlay').style.display = 'flex';
-  doSearch(v);
-});
-document.getElementById('city-input2').addEventListener('keydown', e => {
-  if (e.key !== 'Enter') return;
-  const v = document.getElementById('city-input2').value.trim();
-  if (!v) return;
-  document.getElementById('weather-data').style.display = 'none';
-  document.getElementById('search-overlay').style.display = 'flex';
-  doSearch(v);
-});
+window.addEventListener("load", forceStarFont);
 </script>
+
 </body>
 </html>
