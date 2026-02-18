@@ -4,21 +4,8 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <title>WeatherSTAR 4000+</title>
-
-<!-- ============================================================
-     LOCAL FONT PRELOAD (ADDED)
-     IMPORTANT: Put the font in your repo at:
-       /assets/fonts/Star4000.ttf
-     So GitHub Pages serves it from your own domain (no CORS issues).
-============================================================ -->
 <link rel="preload" href="./assets/fonts/Star4000.ttf" as="font" type="font/ttf" crossorigin>
-
 <style>
-/* ============================================================
-   LOCAL @font-face (CHANGED ONLY THE URL)
-   Was: https://wsbylunv.neocities.org/Star4000.ttf
-   Now: ./assets/fonts/Star4000.ttf
-============================================================ */
 @font-face {
   font-family: 'Star4000';
   src: url('./assets/fonts/Star4000.ttf') format('truetype');
@@ -26,39 +13,53 @@
 }
 
 /* ============================================================
-   OPTIONAL DUPLICATE FACE (KEPT/ADDED)
-   Some browsers re-request font differently; harmless if redundant.
-============================================================ */
-@font-face {
-  font-family: 'Star4000';
-  src: url('./assets/fonts/Star4000.ttf?v=4000') format('truetype');
-  font-display: block;
-}
-
-/* ============================================================ */
+   TWEAK THESE VALUES
+   ============================================================ */
 :root {
-  --clock-top:   8px;
-  --clock-right: 12px;
+  /* Clock — moved down 75px, left 125px from original (8px top, 12px right) */
+  --clock-top:   83px;
+  --clock-right: 137px;
+
+  /* City — moved left 55px from original (20px right) */
   --city-top:    100px;
-  --city-right:  20px;
+  --city-right:  75px;
   --city-size:   1.3rem;
+
+  /* Temp — moved right 50px from original (32px left) */
   --temp-top:    130px;
-  --temp-left:   32px;
+  --temp-left:   82px;
   --temp-size:   2.8rem;
+
+  /* Condition — moved right 50px */
   --cond-top:    210px;
-  --cond-left:   32px;
+  --cond-left:   82px;
   --cond-size:   1.3rem;
+
+  /* Wind — moved right 50px */
   --wind-top:    310px;
-  --wind-left:   32px;
+  --wind-left:   82px;
   --wind-size:   1.1rem;
-  --details-top: 105px;
-  --details-left:310px;
-  --lbl-left:    0px;
-  --lbl-size:    1.1rem;
-  --val-offset:  160px;
-  --val-size:    1.1rem;
-  --row-height:  1.9rem;
+
+  /* Details block — moved down 100px from original (105px top) */
+  --details-top:  205px;
+  --details-left: 310px;
+
+  /* Label positions */
+  --lbl-left:   0px;
+  --lbl-size:   1.1rem;
+
+  /* Value column — 25px from label text end */
+  --val-offset: 160px;
+  --val-size:   1.1rem;
+
+  /* Row height */
+  --row-height: 1.9rem;
+
+  /* Bottom bar */
   --bottom-size: 1.1rem;
+
+  /* Wind chill label extra nudge down 25px */
+  --wc-extra-top: 25px;
 }
 /* ============================================================ */
 
@@ -70,20 +71,56 @@
 }
 
 body {
-  background: #111;
+  background: #000;
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+/* Make screen fill the viewport while keeping aspect ratio */
+#screen-wrap {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 #screen {
   position: relative;
-  width: 640px;
-  height: 512px;
+  width: 100vw;
+  height: 100vh;
   background: url('https://wsbylunv.neocities.org/ws4000_bg.png') center/100% 100% no-repeat;
   background-color: #000a2a;
   overflow: hidden;
+}
+
+/* ── SCANLINES ── */
+#screen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0,0,0,0.18) 0px,
+    rgba(0,0,0,0.18) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  pointer-events: none;
+  z-index: 50;
+}
+
+/* ── TEXT OUTLINE MIXIN (applied via text-shadow) ── */
+.outlined {
+  text-shadow:
+    -1px -1px 0 #000,
+     1px -1px 0 #000,
+    -1px  1px 0 #000,
+     1px  1px 0 #000;
 }
 
 /* CLOCK */
@@ -93,6 +130,7 @@ body {
   right: var(--clock-right);
   text-align: right;
   color: #fff;
+  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
 }
 #clock .time { font-size: 1.2rem; }
 #clock .date { font-size: 0.95rem; }
@@ -106,6 +144,7 @@ body {
   font-size: var(--city-size);
   text-align: right;
   max-width: 280px;
+  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
 }
 
 /* TEMP */
@@ -115,6 +154,7 @@ body {
   left: var(--temp-left);
   color: #fff;
   font-size: var(--temp-size);
+  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
 }
 
 /* CONDITION */
@@ -124,6 +164,7 @@ body {
   left: var(--cond-left);
   color: #fff;
   font-size: var(--cond-size);
+  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
 }
 
 /* WIND */
@@ -133,6 +174,7 @@ body {
   left: var(--wind-left);
   color: #fff;
   font-size: var(--wind-size);
+  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
 }
 
 /* DETAILS */
@@ -152,13 +194,27 @@ body {
 .drow .lbl {
   position: absolute;
   left: var(--lbl-left);
+  top: 0;
   font-size: var(--lbl-size);
+  white-space: nowrap;
+  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
 }
 .drow .val {
   position: absolute;
   left: var(--val-offset);
+  top: 0;
   font-size: var(--val-size);
+  white-space: nowrap;
+  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
 }
+
+/* Wind chill row — label 25px lower */
+#row-wc .lbl { top: var(--wc-extra-top); }
+/* Wind chill value — same y as its label */
+#row-wc .val { top: var(--wc-extra-top); }
+
+/* Heat index value — same y as its label (top: 0, already default) */
+#row-hi .val { top: 0; }
 
 /* BOTTOM */
 #bottom-text {
@@ -169,6 +225,7 @@ body {
   text-align: center;
   color: #fff;
   font-size: var(--bottom-size);
+  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
 }
 
 /* SEARCH OVERLAY */
@@ -183,7 +240,6 @@ body {
   gap: 14px;
   z-index: 20;
 }
-
 #search-overlay input {
   background: rgba(0,0,20,0.85);
   border: 2px solid #4af;
@@ -203,7 +259,6 @@ body {
   cursor: pointer;
 }
 #search-overlay button:hover { background: #4af; color: #000; }
-
 #status-msg { color: #4af; font-size: 0.9rem; letter-spacing: 2px; min-height: 1.2em; }
 #status-msg.error { color: #f44; }
 
@@ -239,16 +294,16 @@ body {
 .blink { animation: blink 1.1s step-end infinite; }
 @keyframes blink { 50% { opacity: 0; } }
 
-/* FINAL LOCK */
-html, body, #screen, #screen *,
-input, button, span, div, p {
+html, body, #screen, #screen *, input, button, span, div, p {
   font-family: "Star4000", sans-serif !important;
 }
 </style>
 </head>
-
 <body>
+<div id="screen-wrap">
 <div id="screen">
+
+  <!-- Scanlines rendered via ::before pseudo -->
 
   <!-- Clock -->
   <div id="clock">
@@ -267,8 +322,8 @@ input, button, span, div, p {
       <div class="drow"><span class="lbl">Dewpoint:</span><span class="val" id="d-dew"></span></div>
       <div class="drow"><span class="lbl">Visibility:</span><span class="val" id="d-vis"></span></div>
       <div class="drow"><span class="lbl">Pressure:</span><span class="val" id="d-pres"></span></div>
-      <div class="drow"><span class="lbl">Heat Index:</span><span class="val" id="d-hi"></span></div>
-      <div class="drow"><span class="lbl">Wind Chill:</span><span class="val" id="d-wc"></span></div>
+      <div class="drow" id="row-hi"><span class="lbl">Heat Index:</span><span class="val" id="d-hi"></span></div>
+      <div class="drow" id="row-wc"><span class="lbl">Wind Chill:</span><span class="val" id="d-wc"></span></div>
     </div>
     <div id="bottom-text">Conditions at <span id="bottom-city"></span></div>
     <div id="inline-search">
@@ -285,6 +340,7 @@ input, button, span, div, p {
   </div>
 
 </div>
+</div>
 
 <script>
 // ── Font force ──
@@ -299,83 +355,27 @@ async function forceStarFont() {
 }
 window.addEventListener('load', forceStarFont);
 
-/* ============================================================
-   INFINITE FONT ENFORCER (ADDED)
-   Keeps re-applying the font forever + observes new DOM nodes.
-   Does not remove or change your original logic.
-============================================================ */
 const __STAR_FONT = '"Star4000", sans-serif';
-const __STAR_PROP = 'font-family';
-
 function __applyStarToEl(el) {
   if (!el || !el.style) return;
-  el.style.setProperty(__STAR_PROP, __STAR_FONT, 'important');
+  el.style.setProperty('font-family', __STAR_FONT, 'important');
 }
-
 function __applyStarToAllNow() {
-  try { document.documentElement && __applyStarToEl(document.documentElement); } catch (e) {}
-  try { document.body && __applyStarToEl(document.body); } catch (e) {}
-  try { document.querySelectorAll('*').forEach(__applyStarToEl); } catch (e) {}
+  try { document.querySelectorAll('*').forEach(__applyStarToEl); } catch(e) {}
 }
-
-async function __keepRequestingFont() {
-  const samples = ['0.5em "Star4000"', '1em "Star4000"', '2em "Star4000"', '16px "Star4000"', '24px "Star4000"'];
-  for (const s of samples) {
-    try { await document.fonts.load(s); } catch (e) {}
-  }
-}
-
-let __starObserver = null;
-function __startStarObserver() {
-  try {
-    if (__starObserver) return;
-    __starObserver = new MutationObserver((mutations) => {
-      for (const m of mutations) {
-        if (m.type === 'childList' && m.addedNodes) {
-          m.addedNodes.forEach(node => {
-            if (node && node.nodeType === 1) {
-              __applyStarToEl(node);
-              try { node.querySelectorAll && node.querySelectorAll('*').forEach(__applyStarToEl); } catch (e) {}
-            }
-          });
-        }
-        if (m.type === 'attributes' && m.target && m.target.nodeType === 1) {
-          __applyStarToEl(m.target);
-        }
+const __obs = new MutationObserver(mutations => {
+  mutations.forEach(m => {
+    m.addedNodes && m.addedNodes.forEach(n => {
+      if (n.nodeType === 1) {
+        __applyStarToEl(n);
+        try { n.querySelectorAll('*').forEach(__applyStarToEl); } catch(e) {}
       }
     });
-    __starObserver.observe(document.documentElement, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['style', 'class']
-    });
-  } catch (e) {}
-}
-
-(function __bootInfiniteFontForce() {
-  __startStarObserver();
-  __applyStarToAllNow();
-  __keepRequestingFont();
-
-  // "Infinity" hammer (won’t delete anything, just reapplies)
-  setInterval(() => {
-    __applyStarToAllNow();
-    __keepRequestingFont();
-  }, 600);
-
-  window.addEventListener('load', () => {
-    __applyStarToAllNow();
-    __keepRequestingFont();
   });
-
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) {
-      __applyStarToAllNow();
-      __keepRequestingFont();
-    }
-  });
-})();
+});
+__obs.observe(document.documentElement, { childList: true, subtree: true });
+setInterval(__applyStarToAllNow, 600);
+window.addEventListener('load', __applyStarToAllNow);
 
 // ── API ──
 async function getCoordinates(city) {
