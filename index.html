@@ -80,22 +80,34 @@ body {
   overflow: hidden;
 }
 
-/* Make screen fill the viewport while keeping aspect ratio */
 #screen-wrap {
-  width: 100vw;
-  height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 100vw;
+  height: 100vh;
 }
 
 #screen {
   position: relative;
-  width: 100vw;
-  height: 100vh;
+  width: 1797px;
+  height: 1347px;
   background: url('https://wsbylunv.neocities.org/ws4000_bg.png') center/100% 100% no-repeat;
   background-color: #000a2a;
   overflow: hidden;
+  transform-origin: center center;
+  /* Default desktop scale: 1.0 */
+  transform: scale(1.0);
+}
+
+/* Tablet */
+@media (max-width: 1024px) {
+  #screen { transform: scale(0.5); }
+}
+
+/* Phone */
+@media (max-width: 480px) {
+  #screen { transform: scale(0.1); }
 }
 
 /* ── SCANLINES ── */
