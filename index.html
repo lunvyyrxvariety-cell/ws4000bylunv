@@ -6,33 +6,32 @@
 <title>WeatherSTAR 4000+</title>
 
 <!-- ============================================================
-     FONT PRELOAD (ADDED)
-     GitHub Pages + cross-origin font hosting can be flaky.
-     Preloading + crossorigin helps when the font server allows it.
-     If the host blocks CORS, the ONLY guaranteed fix is to self-host
-     the font in your GitHub repo and point @font-face to ./Star4000.ttf
-     (but I'm not changing your URL since you said don't remove anything).
+     LOCAL FONT PRELOAD (ADDED)
+     IMPORTANT: Put the font in your repo at:
+       /assets/fonts/Star4000.ttf
+     So GitHub Pages serves it from your own domain (no CORS issues).
 ============================================================ -->
-<link rel="preload" href="https://wsbylunv.neocities.org/Star4000.ttf" as="font" type="font/ttf" crossorigin>
-<link rel="preconnect" href="https://wsbylunv.neocities.org" crossorigin>
-<link rel="dns-prefetch" href="https://wsbylunv.neocities.org">
+<link rel="preload" href="./assets/fonts/Star4000.ttf" as="font" type="font/ttf" crossorigin>
 
 <style>
+/* ============================================================
+   LOCAL @font-face (CHANGED ONLY THE URL)
+   Was: https://wsbylunv.neocities.org/Star4000.ttf
+   Now: ./assets/fonts/Star4000.ttf
+============================================================ */
 @font-face {
   font-family: 'Star4000';
-  src: url('https://wsbylunv.neocities.org/Star4000.ttf') format('truetype');
+  src: url('./assets/fonts/Star4000.ttf') format('truetype');
   font-display: block;
 }
 
 /* ============================================================
-   EXTRA FONT-FACE (ADDED)
-   Some browsers behave better if you declare the same face twice with
-   a cache-buster path as a fallback. This does NOT remove your original.
-   (If the server rejects querystrings, it will just fail harmlessly.)
+   OPTIONAL DUPLICATE FACE (KEPT/ADDED)
+   Some browsers re-request font differently; harmless if redundant.
 ============================================================ */
 @font-face {
   font-family: 'Star4000';
-  src: url('https://wsbylunv.neocities.org/Star4000.ttf?v=4000') format('truetype');
+  src: url('./assets/fonts/Star4000.ttf?v=4000') format('truetype');
   font-display: block;
 }
 
@@ -67,14 +66,6 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-family: "Star4000", sans-serif !important;
-}
-
-/* ============================================================
-   HARD FORCE ON ROOT ELEMENTS (ADDED)
-   Ensures default inheritance starts from the top of the tree.
-============================================================ */
-html, body {
   font-family: "Star4000", sans-serif !important;
 }
 
@@ -253,23 +244,6 @@ html, body, #screen, #screen *,
 input, button, span, div, p {
   font-family: "Star4000", sans-serif !important;
 }
-
-/* ============================================================
-   NUCLEAR OVERRIDES (ADDED)
-   Some browsers apply form-control fonts separately. This catches them.
-============================================================ */
-input, button, textarea, select, option {
-  font-family: "Star4000", sans-serif !important;
-  -webkit-font-smoothing: none;
-  text-rendering: geometricPrecision;
-}
-
-/* ============================================================
-   NOTE (ADDED)
-   If the font host blocks cross-origin fonts (CORS), NO amount of JS
-   can “force” the browser to use the font. In that case, self-host the
-   .ttf in your GitHub repo and change the src to a relative path.
-============================================================ */
 </style>
 </head>
 
@@ -327,104 +301,49 @@ window.addEventListener('load', forceStarFont);
 
 /* ============================================================
    INFINITE FONT ENFORCER (ADDED)
-   - Re-applies font forever (interval + RAF + idle callback)
-   - Observes DOM changes and enforces on new nodes
-   - Tries a direct FontFace() load as an extra kick
-   This DOES NOT remove anything you already had.
+   Keeps re-applying the font forever + observes new DOM nodes.
+   Does not remove or change your original logic.
 ============================================================ */
-
-// A very small utility to avoid spamming the same style repeatedly too hard
 const __STAR_FONT = '"Star4000", sans-serif';
 const __STAR_PROP = 'font-family';
 
-// Apply font to one element with !important
 function __applyStarToEl(el) {
   if (!el || !el.style) return;
   el.style.setProperty(__STAR_PROP, __STAR_FONT, 'important');
 }
 
-// Apply font to document root + common form controls
-function __applyStarToRoots() {
-  try {
-    __applyStarToEl(document.documentElement);
-    __applyStarToEl(document.body);
-    // Also set as inline style on #screen if present
-    const screen = document.getElementById('screen');
-    if (screen) __applyStarToEl(screen);
-  } catch (e) {}
-}
-
-// Apply font to EVERYTHING currently in DOM
 function __applyStarToAllNow() {
-  try {
-    __applyStarToRoots();
-    document.querySelectorAll('*').forEach(__applyStarToEl);
-  } catch (e) {}
+  try { document.documentElement && __applyStarToEl(document.documentElement); } catch (e) {}
+  try { document.body && __applyStarToEl(document.body); } catch (e) {}
+  try { document.querySelectorAll('*').forEach(__applyStarToEl); } catch (e) {}
 }
 
-// Try to load font via FontFace API (extra kick, especially if fonts.load is flaky)
-async function __kickFontFaceLoad() {
-  try {
-    if (!('FontFace' in window) || !document.fonts) return;
-
-    // Attempt both URLs (with and without cache bust)
-    const urls = [
-      'https://wsbylunv.neocities.org/Star4000.ttf',
-      'https://wsbylunv.neocities.org/Star4000.ttf?v=4000'
-    ];
-
-    for (const u of urls) {
-      try {
-        const ff = new FontFace('Star4000', `url(${u})`, { style: 'normal', weight: '400' });
-        const loaded = await ff.load();
-        document.fonts.add(loaded);
-      } catch (e) {
-        // Ignore and try next
-      }
-    }
-  } catch (e) {}
-}
-
-// Repeatedly ask the browser to “touch” the font so it stays alive
 async function __keepRequestingFont() {
-  // Try multiple sizes so browsers that key cache weirdly still load it
-  const samples = [
-    '0.5em "Star4000"',
-    '1em "Star4000"',
-    '2em "Star4000"',
-    '16px "Star4000"',
-    '24px "Star4000"'
-  ];
+  const samples = ['0.5em "Star4000"', '1em "Star4000"', '2em "Star4000"', '16px "Star4000"', '24px "Star4000"'];
   for (const s of samples) {
     try { await document.fonts.load(s); } catch (e) {}
   }
 }
 
-// Mutation observer: any new node gets forced immediately
 let __starObserver = null;
 function __startStarObserver() {
   try {
     if (__starObserver) return;
     __starObserver = new MutationObserver((mutations) => {
       for (const m of mutations) {
-        if (m.type === 'childList') {
-          m.addedNodes && m.addedNodes.forEach(node => {
-            if (!node) return;
-            if (node.nodeType === 1) {
+        if (m.type === 'childList' && m.addedNodes) {
+          m.addedNodes.forEach(node => {
+            if (node && node.nodeType === 1) {
               __applyStarToEl(node);
-              // If a subtree was added, apply to its children too
-              try {
-                node.querySelectorAll && node.querySelectorAll('*').forEach(__applyStarToEl);
-              } catch (e) {}
+              try { node.querySelectorAll && node.querySelectorAll('*').forEach(__applyStarToEl); } catch (e) {}
             }
           });
-        } else if (m.type === 'attributes') {
-          // If style/class changes, re-assert font
-          if (m.target && m.target.nodeType === 1) __applyStarToEl(m.target);
+        }
+        if (m.type === 'attributes' && m.target && m.target.nodeType === 1) {
+          __applyStarToEl(m.target);
         }
       }
     });
-
     __starObserver.observe(document.documentElement, {
       childList: true,
       subtree: true,
@@ -434,86 +353,29 @@ function __startStarObserver() {
   } catch (e) {}
 }
 
-// RAF loop: every frame (or close), keep enforcing roots lightly
-function __rafStarLoop() {
-  try { __applyStarToRoots(); } catch (e) {}
-  requestAnimationFrame(__rafStarLoop);
-}
-
-// Idle loop: when idle, enforce everything
-function __idleStarLoop() {
-  try { __applyStarToAllNow(); } catch (e) {}
-  if ('requestIdleCallback' in window) {
-    requestIdleCallback(__idleStarLoop, { timeout: 1000 });
-  } else {
-    setTimeout(__idleStarLoop, 900);
-  }
-}
-
-// Interval loop: the “infinity” hammer (kept moderate to avoid freezing)
-function __intervalStarLoop() {
+(function __bootInfiniteFontForce() {
+  __startStarObserver();
   __applyStarToAllNow();
   __keepRequestingFont();
-  __kickFontFaceLoad();
-}
 
-// Boot the nuclear font system ASAP
-(function __bootInfiniteFontForce() {
-  // Start observer immediately
-  __startStarObserver();
-
-  // Immediate apply
-  __applyStarToAllNow();
-
-  // Start loops
-  requestAnimationFrame(__rafStarLoop);
-  if ('requestIdleCallback' in window) requestIdleCallback(__idleStarLoop, { timeout: 1000 });
-  else setTimeout(__idleStarLoop, 900);
-
-  // Infinite interval: every 600ms enforce all + attempt loads
-  setInterval(__intervalStarLoop, 600);
-
-  // Also do a burst in the first few seconds
-  let bursts = 0;
-  const burstTimer = setInterval(() => {
-    bursts++;
+  // "Infinity" hammer (won’t delete anything, just reapplies)
+  setInterval(() => {
     __applyStarToAllNow();
     __keepRequestingFont();
-    if (bursts >= 10) clearInterval(burstTimer);
-  }, 250);
+  }, 600);
 
-  // Another enforcement on full load
   window.addEventListener('load', () => {
     __applyStarToAllNow();
     __keepRequestingFont();
-    __kickFontFaceLoad();
   });
 
-  // And when tab becomes visible again
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) {
       __applyStarToAllNow();
       __keepRequestingFont();
-      __kickFontFaceLoad();
     }
   });
 })();
-
-/* ============================================================
-   OPTIONAL DEBUG (ADDED, DOES NOTHING VISUALLY)
-   You can open DevTools console to see if the font is considered loaded.
-============================================================ */
-function __logFontStatusOnce() {
-  try {
-    if (document.fonts && document.fonts.check) {
-      const ok = document.fonts.check('16px "Star4000"');
-      console.log('[WS4000+] Star4000 font loaded?', ok);
-    }
-  } catch (e) {}
-}
-setTimeout(__logFontStatusOnce, 1200);
-setTimeout(__logFontStatusOnce, 3500);
-setTimeout(__logFontStatusOnce, 7000);
 
 // ── API ──
 async function getCoordinates(city) {
