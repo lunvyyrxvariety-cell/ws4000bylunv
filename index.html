@@ -645,6 +645,8 @@ function fadeSwap(fn){
 function setPage(page) {
   return fadeSwap(() => {
   screen.classList.remove("travel-bg", "regional-bg");
+  screen.style.backgroundImage = "";
+  screen.style.backgroundSize = "";
   setMarkersVisible(false);
 
   const locName = document.getElementById("loc-name");
@@ -671,6 +673,8 @@ function setPage(page) {
     renderTravel();
   } else if (page === "regional-obs") {
     document.getElementById("page-header").innerHTML = "Regional<br>Observations";
+    screen.style.backgroundImage = "url('https://wsbylunv.neocities.org/ws4000wherediditgo.png'), url('https://raw.githubusercontent.com/lunvyyrx23/ws4000byaqzzyx/main/Basemap2.png')";
+    screen.style.backgroundSize = "100% 100%, 100% 100%";
     showOnly(["regional-content"]);
     if (locName) locName.style.display = "none";
     renderRegionalObs();
@@ -1216,6 +1220,8 @@ function drawRegionalDots(cities) {
 }
 
 
+/* =========================
+   DATA FETCH
    - accepts "lat,lon" OR "City, ST"
    - City geocode uses Nominatim (NWS has no city->lat/lon endpoint)
 ========================= */
@@ -1231,6 +1237,8 @@ async function fetchWithRetry(url, attempts = 3) {
     }
   }
 }
+
+async function parseInputToLatLon(raw) {
   const s = String(raw || "").trim();
   if (!s) throw new Error("Empty location");
 
