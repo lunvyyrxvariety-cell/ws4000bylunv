@@ -2,527 +2,1582 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>WeatherSTAR 4000+</title>
-<link rel="preload" href="./assets/fonts/Star4000.ttf" as="font" type="font/ttf" crossorigin>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WeatherStar 4000 - Golden Scroll (Single File)</title>
+
 <style>
-@font-face {
-  font-family: 'Star4000';
-  src: url('./assets/fonts/Star4000.ttf') format('truetype');
-  font-display: block;
+  @font-face {
+    font-family: "Star4000";
+    src: local("Star4000"), local("Star 4000"),
+      url("https://wsbylunv.neocities.org/Star4000.ttf") format("truetype");
+    font-weight: normal;
+    font-style: normal;
+  }
+
+  * { font-family: "Star4000", monospace !important; margin: 0; padding: 0; box-sizing: border-box; }
+  body { background:#111; height:100vh; display:flex; justify-content:center; align-items:center; overflow:hidden; }
+
+  :root{ --ui-scale: 1; }
+  .ws-container{ transform: scale(var(--ui-scale)); transform-origin: top left; }
+  body.mobile :root{}
+  body.mobile{ background:#111; }
+  /* Minimal sidebar look */
+  .sidebar{ width:210px; padding:14px; 
+    position:relative; z-index:250 !important;
+}
+  .label, .tiny{ display:none !important; }
+  input{ padding:8px; font-size:16px; }
+  button{ padding:8px; font-size:14px; }
+  .test-btn{ font-size:10px; padding:6px; }
+  /* Fade layer */
+  #fade-layer{ position:absolute; inset:0; background:#000; opacity:0; pointer-events:none; z-index:95; transition: opacity 260ms ease; }
+  #ws4000-screen.fading #fade-layer{ opacity:1; }
+
+
+  #loading-screen{
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    background:#000; color:#ffff00; font-size:45px;
+    display:none; justify-content:center; align-items:center;
+    z-index:100; text-shadow:3px 3px 0 #000;
+  
+    pointer-events:none;
 }
 
-/* ============================================================
-   TWEAK THESE VALUES
-   ============================================================ */
-:root {
-  /* Clock — moved down 75px, left 125px from original (8px top, 12px right) */
-  --clock-top:   83px;
-  --clock-right: 137px;
+  .ws-container{ display:flex; position:relative; }
 
-  /* City — moved left 55px from original (20px right) */
-  --city-top:    100px;
-  --city-right:  75px;
-  --city-size:   66px;
+  .sidebar{
+    width:280px;
+    background:linear-gradient(90deg,#001a33,#003366,#001a33);
+    border-right:5px solid #000;
+    padding:20px;
+    z-index:10;
+    height:820px;
+  }
 
-  /* Temp — moved right 50px from original (32px left) */
-  --temp-top:    130px;
-  --temp-left:   82px;
-  --temp-size:   90px;
+  .label{ color:#fff; font-size:14px; margin-top:15px; margin-bottom:5px; }
+  input{
+    width:100%; padding:10px; background:#000; border:2px solid #ffff00;
+    color:#ffff00; font-size:18px; outline:none;
+  }
+  button{
+    width:100%; margin-top:5px; padding:10px; background:#ffff00; color:#000;
+    border:none; cursor:pointer; font-size:16px; font-weight:bold;
+  }
+  .test-btn{ background:#222; color:#aaa; font-size:11px; margin-bottom:4px; border:1px solid #444; width:100%; }
+  #pause-btn{ background:#ff4444; color:#fff; margin-top:20px; }
+  #mute-btn{ background:#444; color:#fff; margin-top:5px; }
+  #scan-btn{ background:#0b3; color:#fff; margin-top:5px; }
+  #force-refresh-btn{ background:#228; color:#fff; margin-top:5px; }
+  .tiny{ font-size:12px; color:#00ccff; line-height:1.2; }
 
-  /* Condition — moved right 50px */
-  --cond-top:    210px;
-  --cond-left:   82px;
-  --cond-size:   66px;
+  #ws4000-screen{
+    position:relative;
+    width:1091px; height:820px;
+    background-size:100% 100%;
+    flex-shrink:0; overflow:hidden;
+    background-image:url("https://wsbylunv.neocities.org/ws4000_bg.png");
+    transition:background-position 1.2s ease-in-out, background-size 1.2s ease-in-out;
+  }
 
-  /* Wind — moved right 50px */
-  --wind-top:    310px;
-  --wind-left:   82px;
-  --wind-size:   63px;
+  #ws4000-screen.travel-bg{ background-image:url("https://wsbylunv.neocities.org/ws4000travel.png") !important; }
 
-  /* Details block — moved down 100px from original (105px top) */
-  --details-top:  205px;
-  --details-left: 310px;
+  .outline-text{
+    text-shadow:
+      -3px -3px 0 #000,
+       3px -3px 0 #000,
+      -3px  3px 0 #000,
+       3px  3px 0 #000,
+       4px  4px 4px rgba(0,0,0,0.8);
+  }
 
-  /* Label positions */
-  --lbl-left:   0px;
-  --lbl-size:   63px;
+  .header{
+    color:#ffff00; font-size:55px; position:absolute; top:50px; left:350px;
+    line-height:1.1; z-index:5;
+  }
 
-  /* Value column — 25px from label text end */
-  --val-offset: 160px;
-  --val-size:   63px;
+  .location-label{
+    color:#ffff00; font-size:38px; position:absolute; top:220px; right:120px;
+    text-align:right; width:650px;
+  }
 
-  /* Row height */
-  --row-height: 80px;
+  #current-content, #obs-table, #hourly-content, #travel-content { display:none; }
 
-  /* Bottom bar */
-  --bottom-size: 63px;
+  #temp-value{ color:#fff; font-size:140px; position:absolute; top:200px; left:125px; }
+  #weather-icon{ position:absolute; top:385px; left:125px; width:180px; image-rendering:pixelated; }
+  .icon-subtext{ position:absolute; top:585px; left:125px; color:#fff; font-size:35px; white-space:pre; }
+  .condition-label{ color:#fff; font-size:30px; position:absolute; top:335px; left:130px; }
 
-  /* Wind chill label extra nudge down 25px */
-  --wc-extra-top: 25px;
-}
-/* ============================================================ */
+  .stats-box{
+    color:#fff; font-size:34px; line-height:1.35;
+    position:absolute; top:290px; right:315px;
+    width:380px;
+  }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  font-family: "Star4000", sans-serif !important;
-}
+  #obs-table{ position:absolute; top:180px; left:110px; width:870px; color:#ffff00; font-size:38px; }
+  .obs-row{ display:grid; grid-template-columns:320px 100px 280px 170px; margin-bottom:20px; }
 
-body {
-  background: #000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  width: 100vw;
-  overflow: hidden;
-}
+  /* ===== Vertical scroll window (pages 3 & 4) =====
+     user request: ~250px tall, centered-ish on bg */
+  #hourly-content, #travel-content{
+    width:930px; height:500px;
+    position:absolute; top:150px; left:80px;
+    overflow:hidden;
+  }
+  .scroll-window{
+    position:absolute; inset:0;
+    overflow:hidden;
+  }
+  .scroll-inner{
+    display:flex;
+    flex-direction:column;
+    will-change:transform;
+  }
+  .scroll-inner.scrolling {
+    animation: ws4000-vscroll var(--scroll-duration, 20s) linear infinite;
+  }
+  @keyframes ws4000-vscroll {
+    0%   { transform: translateY(0); }
+    100% { transform: translateY(-50%); }
+  }
+  body.paused .scroll-inner{ animation-play-state: paused; }
 
-#screen-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100vw;
-  height: 100vh;
-}
+  .row-style{ display:grid; font-size:38px; height:60px; align-items:center; color:#ffff00; }
+  .hourly-row{ grid-template-columns:220px 90px 260px 160px; }
+  .travel-row{ grid-template-columns:340px 90px 160px 160px; }
 
-#screen {
-  position: relative;
-  width: 1797px;
-  height: 1347px;
-  background: url('https://wsbylunv.neocities.org/ws4000_bg.png') center/100% 100% no-repeat;
-  background-color: #000a2a;
-  overflow: hidden;
-  transform-origin: center center;
-  transform: scale(0.6);
-}
+  .temp-num{ color:#ffff00; min-width:80px; text-align:right; margin-right:40px; }
+  .low-num{ color:#ffff00; min-width:80px; text-align:right; }
+  .list-icon{ width:85px; height:auto; image-rendering:pixelated; }
 
-/* Laptop */
-@media (max-width: 1440px) {
-  #screen { transform: scale(0.6); }
-}
+  /* =========================
+     SCANLINES OVERLAY (toggle)
+  ========================= */
+  #scanlines{
+    pointer-events:none;
+    position:absolute; inset:0;
+    z-index:200;
+    opacity:0.5;
+    background:
+      repeating-linear-gradient(
+        to bottom,
+        rgba(0,0,0,0.0) 0px,
+        rgba(0,0,0,0.0) 6px,
+        rgba(0,0,0,0.7) 10px
+      );
+    animation: scanFlicker 6s linear infinite;
+  }
 
-/* Tablet — revert font sizes */
-@media (max-width: 1024px) {
-  #screen { transform: scale(0.5); }
-  #clock .time { font-size: 1.2rem; }
-  #clock .date { font-size: 0.95rem; }
-  #city-name  { font-size: 1.3rem; }
-  #cur-temp   { font-size: 2.8rem; }
-  #cur-cond   { font-size: 1.3rem; }
-  #cur-wind   { font-size: 1.1rem; }
-  .drow .lbl  { font-size: 1.1rem; }
-  .drow .val  { font-size: 1.1rem; }
-  #bottom-text { font-size: 1.1rem; }
-}
-
-/* Phone — revert font sizes */
-@media (max-width: 480px) {
-  #screen { transform: scale(0.1); }
-  #clock .time { font-size: 1.2rem; }
-  #clock .date { font-size: 0.95rem; }
-  #city-name  { font-size: 1.3rem; }
-  #cur-temp   { font-size: 2.8rem; }
-  #cur-cond   { font-size: 1.3rem; }
-  #cur-wind   { font-size: 1.1rem; }
-  .drow .lbl  { font-size: 1.1rem; }
-  .drow .val  { font-size: 1.1rem; }
-  #bottom-text { font-size: 1.1rem; }
-}
-
-/* ── SCANLINES ── */
-#screen::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    to bottom,
-    rgba(0,0,0,0.18) 0px,
-    rgba(0,0,0,0.18) 1px,
-    transparent 1px,
-    transparent 3px
-  );
-  pointer-events: none;
-  z-index: 50;
-}
-
-/* ── TEXT OUTLINE MIXIN (applied via text-shadow) ── */
-.outlined {
-  text-shadow:
-    -1px -1px 0 #000,
-     1px -1px 0 #000,
-    -1px  1px 0 #000,
-     1px  1px 0 #000;
+  #scanlines::after{
+    content:"";
+    position:absolute; inset:-40%;
+    background: linear-gradient(to bottom,
+      rgba(255,255,255,0.00),
+      rgba(255,255,255,0.04),
+      rgba(255,255,255,0.00)
+    );
+    transform: translateY(-30%);
+    animation: scanRoll 7s linear infinite;
+    opacity:0.7;
+  
+    pointer-events:none !important;
 }
 
-/* CLOCK */
-#clock {
-  position: absolute;
-  top: var(--clock-top);
-  right: var(--clock-right);
-  text-align: right;
-  color: #fff;
-  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-}
-#clock .time { font-size: 63px; }
-#clock .date { font-size: 60px; }
+  @keyframes scanFlicker{
+    0%,100%{ opacity:0.33; }
+    35%{ opacity:0.37; }
+    55%{ opacity:0.30; }
+    75%{ opacity:0.40; }
+  }
+  @keyframes scanRoll{
+    0%{ transform: translateY(-35%); }
+    100%{ transform: translateY(35%); }
+  }
 
-/* CITY */
-#city-name {
-  position: absolute;
-  top: var(--city-top);
-  right: var(--city-right);
-  color: #ffe600;
-  font-size: var(--city-size);
-  text-align: right;
-  max-width: 280px;
-  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-}
+  body.scan-off #scanlines{ display:none; }
 
-/* TEMP */
-#cur-temp {
-  position: absolute;
-  top: var(--temp-top);
-  left: var(--temp-left);
-  color: #fff;
-  font-size: var(--temp-size);
-  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-}
+  /* =========================
+     THEME OVERRIDES
+     default: Modern (black/white)
+  ========================= */
+  body.modern { background:#0b0b0b; }
+  body.modern .sidebar{
+    background:#0b0b0b !important;
+    border-right:2px solid #222 !important;
+  }
+  body.modern .label{ color:#eaeaea; letter-spacing:0.5px; }
+  body.modern input{
+    background:#000; border:1px solid #666; color:#fff;
+  }
+  body.modern button{
+    background:#fff; color:#000;
+  }
+  body.modern .test-btn{
+    background:#111; color:#fff; border:1px solid #333;
+  }
+  body.modern #pause-btn{ background:#fff; color:#000; }
+  body.modern #mute-btn{ background:#111; color:#fff; border:1px solid #333; }
+  body.modern #scan-btn{ background:#111; color:#fff; border:1px solid #333; }
+  body.modern #force-refresh-btn{ background:#111; color:#fff; border:1px solid #333; }
+  body.modern .tiny{ color:#b9b9b9; }
 
-/* CONDITION */
-#cur-cond {
-  position: absolute;
-  top: var(--cond-top);
-  left: var(--cond-left);
-  color: #fff;
-  font-size: var(--cond-size);
-  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-}
+  body.ws4000 { background:#111; }
+  body.ws4000 .sidebar{
+    background:linear-gradient(90deg,#001a33,#003366,#001a33) !important;
+    border-right:5px solid #000 !important;
+  }
+  body.ws4000 input{ border:2px solid #ffff00; color:#ffff00; }
+  body.ws4000 button{ background:#ffff00; color:#000; }
+  body.ws4000 .test-btn{ background:#222; color:#aaa; border:1px solid #444; }
+  body.ws4000 .tiny{ color:#00ccff; }
 
-/* WIND */
-#cur-wind {
-  position: absolute;
-  top: var(--wind-top);
-  left: var(--wind-left);
-  color: #fff;
-  font-size: var(--wind-size);
-  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-}
-
-/* DETAILS */
-#details {
-  position: absolute;
-  top: var(--details-top);
-  left: var(--details-left);
-  display: flex;
-  flex-direction: column;
-}
-
-.drow {
-  position: relative;
-  height: var(--row-height);
-  color: #fff;
-}
-.drow .lbl {
-  position: absolute;
-  left: var(--lbl-left);
-  top: 0;
-  font-size: var(--lbl-size);
-  white-space: nowrap;
-  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-}
-.drow .val {
-  position: absolute;
-  left: var(--val-offset);
-  top: 0;
-  font-size: var(--val-size);
-  white-space: nowrap;
-  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-}
-
-/* Wind chill row — label 25px lower */
-#row-wc .lbl { top: var(--wc-extra-top); }
-/* Wind chill value — same y as its label */
-#row-wc .val { top: var(--wc-extra-top); }
-
-/* Heat index value — same y as its label (top: 0, already default) */
-#row-hi .val { top: 0; }
-
-/* BOTTOM */
-#bottom-text {
-  position: absolute;
-  bottom: 18px;
-  left: 0;
-  right: 0;
-  text-align: center;
-  color: #fff;
-  font-size: var(--bottom-size);
-  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
-}
-
-/* SEARCH OVERLAY */
-#search-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,0.6);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  z-index: 20;
-}
-#search-overlay input {
-  background: rgba(0,0,20,0.85);
-  border: 2px solid #4af;
-  color: #4af;
-  font-size: 1rem;
-  padding: 6px 14px;
-  outline: none;
-  width: 260px;
-}
-#search-overlay input::placeholder { color: #336; }
-#search-overlay button {
-  background: #1a3fc4;
-  color: #fff;
-  border: 2px solid #4af;
-  font-size: 1rem;
-  padding: 6px 20px;
-  cursor: pointer;
-}
-#search-overlay button:hover { background: #4af; color: #000; }
-#status-msg { color: #4af; font-size: 0.9rem; letter-spacing: 2px; min-height: 1.2em; }
-#status-msg.error { color: #f44; }
-
-/* INLINE SEARCH */
-#inline-search {
-  position: absolute;
-  bottom: 60px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 6px;
-  z-index: 10;
-}
-#inline-search input {
-  background: rgba(0,0,20,0.75);
-  border: 1px solid #4af;
-  color: #4af;
-  font-size: 0.85rem;
-  padding: 3px 10px;
-  outline: none;
-  width: 200px;
-}
-#inline-search input::placeholder { color: #335; }
-#inline-search button {
-  background: rgba(26,63,196,0.8);
-  color: #fff;
-  border: 1px solid #4af;
-  font-size: 0.85rem;
-  padding: 3px 10px;
-  cursor: pointer;
-}
-
-.blink { animation: blink 1.1s step-end infinite; }
-@keyframes blink { 50% { opacity: 0; } }
-
-html, body, #screen, #screen *, input, button, span, div, p {
-  font-family: "Star4000", sans-serif !important;
-}
 </style>
 </head>
-<body>
-<div id="screen-wrap">
-<div id="screen">
 
-  <!-- Scanlines rendered via ::before pseudo -->
+<body class=\"modern\">
 
-  <!-- Clock -->
-  <div id="clock">
-    <div class="time" id="clock-time">--:-- --</div>
-    <div class="date" id="clock-date">--- --- --</div>
-  </div>
+  <div class="ws-container">
+    <div class="sidebar">
+      <div class="label">Theme</div>
+      <div style="display:flex; gap:6px; margin-bottom:6px;">
+        <button id="theme-modern" class="test-btn" style="flex:1;" onclick="setTheme('modern')">Modern</button>
+        <button id="theme-ws" class="test-btn" style="flex:1;" onclick="setTheme('ws4000')">WS4000</button>
+      </div>
 
-  <!-- Weather Data -->
-  <div id="weather-data" style="display:none;">
-    <div id="city-name"></div>
-    <div id="cur-temp"></div>
-    <div id="cur-cond"></div>
-    <div id="cur-wind">Wind: <span id="wind-val"></span></div>
-    <div id="details">
-      <div class="drow"><span class="lbl">Humidity:</span><span class="val" id="d-hum"></span></div>
-      <div class="drow"><span class="lbl">Dewpoint:</span><span class="val" id="d-dew"></span></div>
-      <div class="drow"><span class="lbl">Visibility:</span><span class="val" id="d-vis"></span></div>
-      <div class="drow"><span class="lbl">Pressure:</span><span class="val" id="d-pres"></span></div>
-      <div class="drow" id="row-hi"><span class="lbl">Heat Index:</span><span class="val" id="d-hi"></span></div>
-      <div class="drow" id="row-wc"><span class="lbl">Wind Chill:</span><span class="val" id="d-wc"></span></div>
+      <div class="label">Location</div>
+      <input type="text" id="cityInput" placeholder="City, ST or lat,lon" />
+      <button onclick="getWeather(true)">Update</button>
+      <button id="force-refresh-btn" onclick="manualRefresh()">Force NWS Refresh</button>
+
+      <div class="label">Auto Update</div>
+      <div class="tiny">
+        Polls NWS every <span id="poll-mins">2</span> min<br>
+        Last: <span id="last-update">--</span>
+      </div>
+
+      <div class="label">Visuals</div>
+      <button id="scan-btn" onclick="toggleScanlines()">Scanlines: On</button>
+
+      <div class="label">Music</div>
+      <div id="music-info" style="color:#00ccff; font-size:13px; margin-bottom:5px;">OFFLINE</div>
+      <button id="mute-btn" onclick="toggleMute()">MUTE Music</button>
+
+      <div class="label">Controls</div>
+      <button id="pause-btn" onclick="togglePause()">Pause Emulator</button>
+
+      <div class="label">Pages</div>
+      <button class="test-btn" onclick="forcePage('current')">1. CURRENT</button>
+      <button class="test-btn" onclick="forcePage('local-obs')">2. LATEST OBS</button>
+      <button class="test-btn" onclick="forcePage('hourly')">3. HOURLY</button>
+      <button class="test-btn" onclick="forcePage('travel')">4. TRAVEL</button>
+      <button class="test-btn" onclick="forcePage('regional-obs')">5. REGIONAL OBS</button>
     </div>
-    <div id="bottom-text">Conditions at <span id="bottom-city"></span></div>
-    <div id="inline-search">
-      <input id="city-input2" type="text" placeholder="Search another city..." />
-      <button id="search-btn2">GO</button>
+
+    <div id="ws4000-screen">
+      <div id="loading-screen" class="outline-text">Loading Data...</div>
+      <div id="page-header" class="header outline-text">CURRENT<br />CONDITIONS</div>
+
+      <div id="scanlines"></div>
+      <div id="fade-layer"></div>
+      <div id="current-content">
+        <img id="weather-icon" src="" alt="" />
+        <div class="icon-subtext outline-text" id="wind-subtext">Wind: --</div>
+        <div id="temp-value" class="outline-text">--°</div>
+        <div class="condition-label outline-text" id="cond-text">Loading...</div>
+        <div class="stats-box outline-text" id="stats"></div>
+      </div>
+
+      <div id="obs-table" class="outline-text"><div id="obs-rows"></div></div>
+
+      <div id="hourly-content" class="outline-text">
+        <div class="scroll-window">
+          <div id="hourly-rows" class="scroll-inner"></div>
+        </div>
+      </div>
+
+      <div id="travel-content" class="outline-text">
+        <div class="scroll-window">
+          <div id="travel-rows" class="scroll-inner"></div>
+        </div>
+      </div>
+
+      <div id="regional-content" style="display:none; position:absolute; inset:0;">
+        <div id="regional-map" style="position:absolute; inset:0; background-image:url('https://wsbylunv.neocities.org/ws4000wherediditgo.png'); background-size:100% 100%;"></div>
+        <div id="regional-dots"></div>
+      </div>
+
+      <div class="location-label outline-text" id="loc-name" style="display:none;">--</div>
     </div>
   </div>
 
-  <!-- Idle search overlay -->
-  <div id="search-overlay">
-    <input id="city-input" type="text" placeholder="ENTER A US CITY..." autocomplete="off" spellcheck="false" />
-    <button id="search-btn">GET FORECAST</button>
-    <div id="status-msg" class="blink">ENTER A CITY TO BEGIN</div>
-  </div>
-
-</div>
-</div>
+  <audio id="bg-audio" crossorigin="anonymous"></audio>
 
 <script>
-// ── Font force ──
-async function forceStarFont() {
+/* =========================
+   INLINE REGIONS.JSON (single file)
+========================= */
+const REGIONS = {
+  "SOUTHEAST": {
+    "zoom": "25% 65%",
+    "stations": [
+      {"id": "KATL", "name": "ATLANTA", "x": 18, "y": 55},
+      {"id": "KCLT", "name": "CHARLOTTE", "x": 62, "y": 32},
+      {"id": "KSAV", "name": "SAVANNAH", "x": 28, "y": 72},
+      {"id": "KCAE", "name": "COLUMBIA", "x": 55, "y": 48},
+      {"id": "KMYR", "name": "MYRTLE BCH", "x": 72, "y": 58},
+      {"id": "KAGS", "name": "AUGUSTA", "x": 38, "y": 58}
+    ]
+  },
+  "NORTHEAST": {
+    "zoom": "0% 100%",
+    "stations": [
+      {"id": "KJFK", "name": "NEW YORK", "x": 80, "y": 45},
+      {"id": "KBOS", "name": "BOSTON", "x": 92, "y": 28},
+      {"id": "KPHL", "name": "PHILA", "x": 75, "y": 52},
+      {"id": "KDCA", "name": "WASH DC", "x": 68, "y": 62}
+    ]
+  },
+  "NORTHWEST": {
+    "zoom": "0% 0%",
+    "stations": [
+      {"id": "KSEA", "name": "SEATTLE", "x": 12, "y": 18},
+      {"id": "KPDX", "name": "PORTLAND", "x": 10, "y": 35},
+      {"id": "KGEG", "name": "SPOKANE", "x": 35, "y": 20}
+    ]
+  },
+  "WEST": {
+    "zoom": "100% 0%",
+    "stations": [
+      {"id": "KSFO", "name": "SAN FRAN", "x": 5, "y": 45},
+      {"id": "KLAX", "name": "LOS ANGELES", "x": 15, "y": 75},
+      {"id": "KPHX", "name": "PHOENIX", "x": 45, "y": 80}
+    ]
+  }
+};
+
+/* =========================
+   GLOBALS / STATE
+========================= */
+const screen = document.getElementById("ws4000-screen");
+const audioPlayer = document.getElementById("bg-audio");
+const musicInfo = document.getElementById("music-info");
+
+let currentCoords = { lat: 35.22, lon: -80.84 };
+let isPaused = false;
+let loopTimer = null;
+let muted = false;
+let scanOn = true;
+
+let pageList = ["current", "local-obs", "hourly", "travel", "regional-obs"];
+let pageIndex = 0;
+
+let hourlyData = [];
+let travelDataCache = [];
+let latestObs = null;
+let currentStationId = null;
+let currentStationName = null;
+
+let pointMeta = { forecastHourlyUrl: null, stationsUrl: null };
+let lastForecastUpdateStamp = null;
+let lastObsUpdateStamp = null;
+
+const POLL_MINS = 2;
+document.getElementById("poll-mins").innerText = String(POLL_MINS);
+let pollTimer = null;
+
+let isDaytimeNow = true; // derived from NWS hourly periods[0].isDaytime when available
+
+/* =========================
+   Music (kept simple)
+========================= */
+const safeDefaultPlaylist = [
+  { name: "Catch the Sun", url: "https://raw.githubusercontent.com/netbymatt/ws4kp-music/main/Catch%20the%20Sun.mp3" },
+  { name: "Crisp Day", url: "https://raw.githubusercontent.com/netbymatt/ws4kp-music/main/Crisp%20day.mp3" },
+  { name: "Downpour", url: "https://raw.githubusercontent.com/netbymatt/ws4kp-music/main/Downpour.mp3" },
+  { name: "Fall Colors", url: "https://raw.githubusercontent.com/netbymatt/ws4kp-music/main/Fall%20colors.mp3" },
+  { name: "Moonlit Sky", url: "https://raw.githubusercontent.com/netbymatt/ws4kp-music/main/Moonlit%20sky.mp3" },
+  { name: "Rolling Clouds", url: "https://raw.githubusercontent.com/netbymatt/ws4kp-music/main/Rolling%20Clouds.mp3" },
+  { name: "Spring Shower", url: "https://raw.githubusercontent.com/netbymatt/ws4kp-music/main/Spring%20Shower.mp3" },
+  { name: "Strong Breeze", url: "https://raw.githubusercontent.com/netbymatt/ws4kp-music/main/Strong%20Breeze.mp3" }
+];
+let playlist = [...safeDefaultPlaylist];
+let shuffledQueue = [];
+let currentMusicIndex = 0;
+let musicStarted = false;
+
+function shuffleMusic() { shuffledQueue = [...playlist].sort(() => Math.random() - 0.5); currentMusicIndex = 0; }
+function playNextTrack() {
+  if (!shuffledQueue.length || currentMusicIndex >= shuffledQueue.length) shuffleMusic();
+  const track = shuffledQueue[currentMusicIndex++];
+  audioPlayer.src = track.url;
+  audioPlayer.muted = muted;
+  audioPlayer.play()
+    .then(() => { musicInfo.innerText = (track.name || "PLAYING").toUpperCase(); })
+    .catch(() => { musicInfo.innerText = "CLICK Update FOR AUDIO"; });
+}
+audioPlayer.onended = playNextTrack;
+function toggleMute() {
+  muted = !muted;
+  audioPlayer.muted = muted;
+  document.getElementById("mute-btn").innerText = muted ? "UNMUTE Music" : "MUTE Music";
+}
+
+/* =========================
+   SCANLINES TOGGLE
+========================= */
+function toggleScanlines() {
+  scanOn = !scanOn;
+  document.body.classList.toggle("scan-off", !scanOn);
+  document.getElementById("scan-btn").innerText = scanOn ? "Scanlines: On" : "Scanlines: Off";
+  document.getElementById("scan-btn").style.background = scanOn ? "#0b3" : "#555";
+}
+
+/* =========================
+   CORE UTILITIES
+========================= */
+function startLoop() {
+  if (isPaused) return;
+  clearTimeout(loopTimer);
+  const page = pageList[pageIndex];
+  const delay = (page === "hourly" || page === "travel") ? 30000 : 12000;
+  loopTimer = setTimeout(nextPage, delay);
+}
+function nextPage() {
+  if (isPaused) return;
+  pageIndex = (pageIndex + 1) % pageList.length;
+  setPage(pageList[pageIndex]);
+  startLoop();
+}
+function togglePause() {
+  isPaused = !isPaused;
+  document.body.classList.toggle("paused", isPaused);
+  const btn = document.getElementById("pause-btn");
+  btn.innerText = isPaused ? "RESUME EMULATOR" : "Pause Emulator";
+  if (isPaused) clearTimeout(loopTimer);
+  else startLoop();
+}
+function forcePage(page) {
+  clearTimeout(loopTimer);
+  pageIndex = Math.max(0, pageList.indexOf(page));
+  setPage(page);
+  startLoop();
+}
+function showOnly(idsToShow) {
+  const all = ["current-content", "obs-table", "hourly-content", "travel-content", "regional-content"];
+  all.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = idsToShow.includes(id) ? "block" : "none";
+  });
+}
+
+function titleCase(str){
+  str = String(str || "").trim().toLowerCase();
+  return str.replace(/\b([a-z])/g, (m, c) => c.toUpperCase());
+}
+function titleCaseCond(str){
+  return titleCase(str).replace(/\bMph\b/g, "mph");
+}
+function formatCityLabel(input){
+  const s = String(input || "").trim();
+  if (!s) return "--";
+  const parts = s.split(",").map(p=>p.trim()).filter(Boolean);
+  if (parts.length >= 2){
+    return titleCase(parts[0]) + ", " + parts[1].toUpperCase();
+  }
+  return titleCase(s);
+}
+
+/* Theme */
+function setTheme(t){
+  const body = document.body;
+  body.classList.toggle("modern", t === "modern");
+  body.classList.toggle("ws4000", t === "ws4000");
+  try { localStorage.setItem("ws_theme", t); } catch {}
+  // button emphasis
+  const mBtn = document.getElementById("theme-modern");
+  const wBtn = document.getElementById("theme-ws");
+  if (mBtn && wBtn){
+    mBtn.style.opacity = (t === "modern") ? "1" : "0.65";
+    wBtn.style.opacity = (t === "ws4000") ? "1" : "0.65";
+  }
+}
+function initTheme(){
+  let t = "modern";
+  try { t = localStorage.getItem("ws_theme") || "modern"; } catch {}
+  setTheme(t);
+}
+
+/* =========================
+   ICON LOGIC (your rules)
+   - Day: "partly sunny" -> mostly cloudy
+   - Day: "partly cloudy" -> mostly sunny
+   - Night: clear icons only if truly night (NWS isDaytime=false)
+   - Night: partly clear -> mostly cloudy
+   - Night: mostly clear -> partly cloudy
+========================= */
+function iconUrl(name) {
+  // All icons live under /yea (single folder)
+  const base = "https://wsbylunv.neocities.org/yea/";
+  return base + name;
+}
+
+function getGifName(txt, isList = false, isDay = true) {
+  const baseUrl = "https://wsbylunv.neocities.org/yea/";
+  txt = String(txt || "").toLowerCase();
+  const night = !isDay;
+  const has = (s) => txt.includes(s);
+
+  // Precip / hazards first
+  if (has("thunder") || has("t-storm") || has("tstorm")) return baseUrl + "Scattered-Tstorms-1992.gif";
+  if (has("tornado")) return baseUrl + "Tornado.gif";
+  if (has("hurricane")) return baseUrl + "Hurricane.gif";
+  if (has("snow") || has("flurries")) return baseUrl + "Snow.gif";
+  if (has("sleet") || has("ice pellets") || has("freezing rain") || has("wintry mix") || has("mix"))
+    return baseUrl + "Mixed.gif";
+  if (has("rain") || has("showers") || has("drizzle")) return baseUrl + "Rain-1992.gif";
+  if (has("fog") || has("mist") || has("haze")) return baseUrl + "Fog.gif";
+
+  if (!night) {
+    // Day rules
+    if (has("partly sunny"))  return baseUrl + "Mostly-Cloudy-2.gif";   // same as mostly cloudy
+    if (has("mostly sunny"))  return baseUrl + "Mostly-Sunny.gif";
+    if (has("partly cloudy")) return baseUrl + "Partly-Cloudy.gif";
+    if (has("mostly cloudy")) return baseUrl + "Mostly-Cloudy-2.gif";
+    if (has("mostly clear"))  return baseUrl + "Mostly-Sunny.gif";
+    if (has("sunny") || has("clear") || has("fair")) return baseUrl + "Sunny.gif";
+  } else {
+    // Night rules
+    if (has("partly clear"))  return baseUrl + "Partly-Clear.gif";
+    if (has("mostly clear"))  return baseUrl + "Mostly-Clear.gif";
+    if (has("clear") || has("fair")) return baseUrl + "Clear.gif";
+    if (has("partly cloudy")) return baseUrl + "Partly-Cloudy.gif";
+    if (has("mostly cloudy") || has("partly sunny")) return baseUrl + "Mostly-Cloudy-2.gif";
+  }
+
+  if (has("mostly cloudy")) return baseUrl + "Mostly-Cloudy-2.gif";
+  if (has("partly cloudy")) return baseUrl + "Partly-Cloudy.gif";
+  if (has("cloudy") || has("overcast")) return baseUrl + "Cloudy.gif";
+
+  return baseUrl + "Cloudy.gif";
+}
+
+function mphFromKph(kph) { if (kph == null || Number.isNaN(kph)) return null; return Math.round(kph * 0.621371); }
+function fFromC(c) { if (c == null || Number.isNaN(c)) return null; return Math.round((c * 9/5) + 32); }
+function ftFromM(m) { if (m == null || Number.isNaN(m)) return null; return Math.round(m * 3.28084); }
+
+function calcWindChillF(tempF, windMph) {
+  if (tempF == null || windMph == null) return null;
+  if (tempF > 50) return null;
+  if (windMph <= 3) return null;
+  const v16 = Math.pow(windMph, 0.16);
+  const wc = 35.74 + 0.6215*tempF - 35.75*v16 + 0.4275*tempF*v16;
+  return Math.round(wc);
+}
+
+function ceilingFromObs(obsProps) {
+  const layers = obsProps?.cloudLayers;
+  if (!Array.isArray(layers) || !layers.length) return "--";
+  const ceilingKinds = new Set(["BKN", "OVC", "VV"]);
+  const ceilingLayers = layers
+    .filter(l => ceilingKinds.has((l?.amount || "").toUpperCase()) && l?.base?.value != null)
+    .map(l => ftFromM(l.base.value))
+    .filter(v => v != null);
+  if (!ceilingLayers.length) return "UNLM";
+  return Math.min(...ceilingLayers) + " FT";
+}
+
+/* =========================
+   MORE ACCURATE REGIONAL PAN + MORE ZOOM
+========================= */
+const BASEMAP_BOUNDS = { minLon:-125.0, maxLon:-66.5, minLat:24.0, maxLat:49.5 };
+const BASEMAP_ZOOM = 560;
+const OFFSET_X_PCT = 0;
+const OFFSET_Y_PCT = 0;
+
+function clamp(n, a, b) { return Math.min(b, Math.max(a, n)); }
+function mercY(latDeg) {
+  const lat = clamp(latDeg, -85, 85) * Math.PI / 180;
+  return Math.log(Math.tan(Math.PI / 4 + lat / 2));
+}
+function latLonToBasemapPosition(lat, lon) {
+  const xNorm = (lon - BASEMAP_BOUNDS.minLon) / (BASEMAP_BOUNDS.maxLon - BASEMAP_BOUNDS.minLon);
+  const yMin = mercY(BASEMAP_BOUNDS.minLat);
+  const yMax = mercY(BASEMAP_BOUNDS.maxLat);
+  const yNow = mercY(lat);
+  const yNorm = (yMax - yNow) / (yMax - yMin);
+  const edge = clamp((100 / BASEMAP_ZOOM) * 160, 1.5, 10);
+  const xPct = clamp(xNorm * 100 + OFFSET_X_PCT, edge, 100 - edge);
+  const yPct = clamp(yNorm * 100 + OFFSET_Y_PCT, edge, 100 - edge);
+  return { xPct, yPct };
+}
+
+/* =========================
+   REGION SELECT (auto)
+========================= */
+function pickRegionByLatLon(lat, lon) {
+  if (lon >= -95 && lat >= 36) return "NORTHEAST";
+  if (lon < -110) return "WEST";
+  if (lon < -105 && lat >= 42) return "NORTHWEST";
+  return "SOUTHEAST";
+}
+let activeRegionName = "SOUTHEAST";
+function activeRegion() { return REGIONS[activeRegionName] || REGIONS.SOUTHEAST; }
+
+/* =========================
+   PAGE RENDERERS
+========================= */
+function setMarkersVisible(on) {
+  ["atl-mark","sav-mark","clt-mark","cae-mark"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = on ? "flex" : "none";
+  });
+}
+
+function fadeSwap(fn){
+  screen.classList.add("fading");
+  // give CSS a frame
+  setTimeout(() => {
+    try { fn(); } finally {
+      setTimeout(() => screen.classList.remove("fading"), 260);
+    }
+  }, 40);
+}
+
+function setPage(page) {
+  return fadeSwap(() => {
+  screen.classList.remove("travel-bg", "regional-bg");
+  setMarkersVisible(false);
+
+  const locName = document.getElementById("loc-name");
+
+  if (page === "current") {
+    document.getElementById("page-header").innerHTML = "Current<br>Conditions";
+    showOnly(["current-content"]);
+    if (locName) locName.style.display = "block";
+  } else if (page === "local-obs") {
+    document.getElementById("page-header").innerHTML = "Latest<br>Observations";
+    showOnly(["obs-table"]);
+    if (locName) locName.style.display = "none";
+    renderLocalObs(); // async, fires and forgets - updates when ready
+  } else if (page === "hourly") {
+    document.getElementById("page-header").innerHTML = "Hourly<br>Forecast";
+    showOnly(["hourly-content"]);
+    if (locName) locName.style.display = "none";
+    renderHourly();
+  } else if (page === "travel") {
+    document.getElementById("page-header").innerHTML = "Travel<br>Forecast";
+    screen.classList.add("travel-bg");
+    showOnly(["travel-content"]);
+    if (locName) locName.style.display = "none";
+    renderTravel();
+  } else if (page === "regional-obs") {
+    document.getElementById("page-header").innerHTML = "Regional<br>Observations";
+    showOnly(["regional-content"]);
+    if (locName) locName.style.display = "none";
+    renderRegionalObs();
+  }
+
+  });
+}
+
+async function renderLocalObs() {
+  const obsRows = document.getElementById("obs-rows");
+  obsRows.innerHTML = `<div style="padding:40px;color:#fff;">LOADING NEARBY STATIONS...</div>`;
+
   try {
-    await document.fonts.load('1em "Star4000"');
-    await document.fonts.ready;
-    document.querySelectorAll('*').forEach(el => {
-      el.style.setProperty('font-family', '"Star4000", sans-serif', 'important');
-    });
-  } catch(e) { console.warn('Star4000 font force failed:', e); }
-}
-window.addEventListener('load', forceStarFont);
+    if (!pointMeta.stationsUrl) throw new Error("No stations URL");
 
-const __STAR_FONT = '"Star4000", sans-serif';
-function __applyStarToEl(el) {
-  if (!el || !el.style) return;
-  el.style.setProperty('font-family', __STAR_FONT, 'important');
-}
-function __applyStarToAllNow() {
-  try { document.querySelectorAll('*').forEach(__applyStarToEl); } catch(e) {}
-}
-const __obs = new MutationObserver(mutations => {
-  mutations.forEach(m => {
-    m.addedNodes && m.addedNodes.forEach(n => {
-      if (n.nodeType === 1) {
-        __applyStarToEl(n);
-        try { n.querySelectorAll('*').forEach(__applyStarToEl); } catch(e) {}
+    const stationsData = await fetch(pointMeta.stationsUrl, { cache:"no-store" }).then(r=>r.json());
+    const stations = stationsData?.features?.slice(0, 7) || [];
+
+    const rows = await Promise.all(stations.map(async (st, i) => {
+      const id = st.properties?.stationIdentifier;
+      const stationName = st.properties?.name || id;
+      // Only city part (before first comma)
+      const city = titleCase(String(stationName).split(",")[0].trim());
+
+      try {
+        const obs = await fetch(`https://api.weather.gov/stations/${id}/observations/latest`, { cache:"no-store" }).then(r=>r.json());
+        const p = obs?.properties;
+        const temp = p?.temperature?.value != null ? fFromC(p.temperature.value) + "°" : "--";
+        const cond = titleCaseCond(p?.textDescription || "--");
+        const windMph = p?.windSpeed?.value != null ? mphFromKph(p.windSpeed.value) : null;
+        const windDir = p?.windDirection?.value != null ? Math.round(p.windDirection.value) + "°" : null;
+        const wind = (windMph != null && windDir != null) ? `${windDir} ${windMph}mph` : "--";
+        return { city, temp, cond, wind };
+      } catch {
+        return { city, temp: "--", cond: "--", wind: "--" };
       }
+    }));
+
+    obsRows.innerHTML = rows.map(r => `
+      <div style="display:grid; grid-template-columns:280px 100px 300px 210px; margin-bottom:18px; color:#ffff00; font-size:34px;">
+        <div style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${r.city}</div>
+        <div>${r.temp}</div>
+        <div style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${r.cond}</div>
+        <div style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${r.wind}</div>
+      </div>
+    `).join("");
+  } catch(e) {
+    obsRows.innerHTML = `<div style="padding:40px;color:#fff;">NO OBSERVATION DATA.</div>`;
+  }
+}
+
+function renderHourly() {
+  const wrap = document.getElementById("hourly-rows");
+  if (!hourlyData?.length) { wrap.innerHTML = `<div style="padding:40px;">NO HOURLY DATA YET.</div>`; return; }
+
+  const slice = hourlyData.slice(0, 12);
+  const html = slice.map(p => {
+    const time = new Date(p.startTime).toLocaleTimeString([], { hour:"numeric", minute:"2-digit" });
+    const isDay = (p.isDaytime !== undefined) ? !!p.isDaytime : isDaytimeNow;
+    const icon = getGifName(p.shortForecast, true, isDay);
+    return `
+      <div class="row-style hourly-row">
+        <div style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${time}</div>
+        <div style="display:flex;justify-content:center;"><img class="list-icon" src="${icon}" alt=""></div>
+        <div style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${titleCaseCond(p.shortForecast || "")}</div>
+        <div style="text-align:right;">${p.temperature}°</div>
+      </div>
+    `;
+  }).join("");
+
+  wrap.innerHTML = html + html;
+  const duration = slice.length * 3.5;
+  wrap.style.setProperty("--scroll-duration", duration + "s");
+  wrap.classList.remove("scrolling");
+  void wrap.offsetWidth;
+  wrap.classList.add("scrolling");
+}
+
+const TRAVEL_LIST = [
+    { city:"Atlanta, GA",       q:"Atlanta, GA" },
+    { city:"Austin, TX",        q:"Austin, TX" },
+    { city:"Chicago, IL",       q:"Chicago, IL" },
+    { city:"Cleveland, OH",     q:"Cleveland, OH" },
+    { city:"Dallas, TX",        q:"Dallas, TX" },
+    { city:"Denver, CO",        q:"Denver, CO" },
+    { city:"Detroit, MI",       q:"Detroit, MI" },
+    { city:"Hartford, CT",      q:"Hartford, CT" },
+    { city:"Houston, TX",       q:"Houston, TX" },
+    { city:"Indianapolis, IN",  q:"Indianapolis, IN" },
+    { city:"Los Angeles, CA",   q:"Los Angeles, CA" },
+    { city:"Miami, FL",         q:"Miami, FL" },
+    { city:"Minneapolis, MN",   q:"Minneapolis, MN" },
+    { city:"New York, NY",      q:"New York, NY" },
+    { city:"Norfolk, VA",       q:"Norfolk, VA" },
+    { city:"Orlando, FL",       q:"Orlando, FL" },
+    { city:"Philadelphia, PA",  q:"Philadelphia, PA" },
+    { city:"Pittsburgh, PA",    q:"Pittsburgh, PA" },
+    { city:"St. Louis, MO",     q:"St. Louis, MO" },
+    { city:"San Francisco, CA", q:"San Francisco, CA" },
+    { city:"Seattle, WA",       q:"Seattle, WA" },
+    { city:"Syracuse, NY",      q:"Syracuse, NY" },
+    { city:"Tampa, FL",         q:"Tampa, FL" },
+    { city:"Washington, DC",    q:"Washington, DC" }
+];
+let travelLoading = false;
+
+async function renderTravel() {
+  const wrap = document.getElementById("travel-rows");
+
+  // Already loaded
+  if (travelDataCache?.length) {
+    _renderTravelRows(wrap);
+    return;
+  }
+
+  // Already loading
+  if (travelLoading) {
+    wrap.innerHTML = `<div style="padding:40px;color:#ffff00;">LOADING TRAVEL CITIES...</div>`;
+    return;
+  }
+
+  travelLoading = true;
+  wrap.innerHTML = `<div style="padding:40px;color:#ffff00;">LOADING TRAVEL CITIES...</div>`;
+  travelDataCache = await loadTravelCities(TRAVEL_LIST);
+  travelLoading = false;
+  _renderTravelRows(wrap);
+}
+
+function _renderTravelRows(wrap) {
+  const html = travelDataCache.map(row => `
+    <div class="row-style travel-row">
+      <div style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${row.city}</div>
+      <div style="display:flex;justify-content:center;"><img class="list-icon" src="${row.icon}" alt=""></div>
+      <div style="text-align:right;">${row.temp}°</div>
+      <div style="text-align:right;">${row.low}°</div>
+    </div>
+  `).join("");
+
+  wrap.innerHTML = html + html;
+  const duration = travelDataCache.length * 3.5;
+  wrap.style.setProperty("--scroll-duration", duration + "s");
+  wrap.classList.remove("scrolling");
+  void wrap.offsetWidth;
+  wrap.classList.add("scrolling");
+}
+
+
+/* =========================
+   REGIONAL OBSERVATIONS (ws4kp-ish)
+   - Uses a built-in city list (from ws4kp RegionalCities.js)
+   - Shows nearest cities to the selected location, plus the user location
+   - Renders dots/labels on top of Basemap2.png (inside a DIV)
+========================= */
+const POP_MIN = 250000;    // kept for compatibility (list already curated)
+const RADIUS_MI = 450;
+const MAX_CITIES = 12;
+
+// ws4kp RegionalCities.js style list (curated major cities)
+const REGIONAL_CITIES = (function(){
+  // Each entry: { name, state, lat, lon }
+  return [
+    {"name":"Atlanta","state":"GA","lat":33.749,"lon":-84.388},
+    {"name":"Augusta","state":"GA","lat":33.4735,"lon":-82.0105},
+    {"name":"Charlotte","state":"NC","lat":35.2271,"lon":-80.8431},
+    {"name":"Columbia","state":"SC","lat":34.0007,"lon":-81.0348},
+    {"name":"Charleston","state":"SC","lat":32.7765,"lon":-79.9311},
+    {"name":"Raleigh","state":"NC","lat":35.7796,"lon":-78.6382},
+    {"name":"Greensboro","state":"NC","lat":36.0726,"lon":-79.792},
+    {"name":"Savannah","state":"GA","lat":32.0809,"lon":-81.0912},
+    {"name":"Myrtle Beach","state":"SC","lat":33.6891,"lon":-78.8867},
+    {"name":"Jacksonville","state":"FL","lat":30.3322,"lon":-81.6557},
+    {"name":"Tampa","state":"FL","lat":27.9506,"lon":-82.4572},
+    {"name":"Miami","state":"FL","lat":25.7617,"lon":-80.1918},
+    {"name":"Orlando","state":"FL","lat":28.5383,"lon":-81.3792},
+    {"name":"Nashville","state":"TN","lat":36.1627,"lon":-86.7816},
+    {"name":"Birmingham","state":"AL","lat":33.5186,"lon":-86.8104},
+    {"name":"New Orleans","state":"LA","lat":29.9511,"lon":-90.0715},
+    {"name":"Washington","state":"DC","lat":38.9072,"lon":-77.0369},
+    {"name":"Richmond","state":"VA","lat":37.5407,"lon":-77.436},
+    {"name":"Norfolk","state":"VA","lat":36.8508,"lon":-76.2859},
+    {"name":"Philadelphia","state":"PA","lat":39.9526,"lon":-75.1652},
+    {"name":"New York","state":"NY","lat":40.7128,"lon":-74.006},
+    {"name":"Boston","state":"MA","lat":42.3601,"lon":-71.0589},
+    {"name":"Pittsburgh","state":"PA","lat":40.4406,"lon":-79.9959},
+    {"name":"Cleveland","state":"OH","lat":41.4993,"lon":-81.6944},
+    {"name":"Detroit","state":"MI","lat":42.3314,"lon":-83.0458},
+    {"name":"Chicago","state":"IL","lat":41.8781,"lon":-87.6298},
+    {"name":"St. Louis","state":"MO","lat":38.627,"lon":-90.1994},
+    {"name":"Dallas","state":"TX","lat":32.7767,"lon":-96.797},
+    {"name":"Houston","state":"TX","lat":29.7604,"lon":-95.3698},
+    {"name":"Denver","state":"CO","lat":39.7392,"lon":-104.9903},
+    {"name":"Phoenix","state":"AZ","lat":33.4484,"lon":-112.074},
+    {"name":"Los Angeles","state":"CA","lat":34.0522,"lon":-118.2437},
+    {"name":"San Francisco","state":"CA","lat":37.7749,"lon":-122.4194},
+    {"name":"Seattle","state":"WA","lat":47.6062,"lon":-122.3321}
+  ];
+})();
+
+function haversineMiles(lat1, lon1, lat2, lon2){
+  const R = 3958.8;
+  const dLat = (lat2-lat1) * Math.PI/180;
+  const dLon = (lon2-lon1) * Math.PI/180;
+  const a =
+    Math.sin(dLat/2)**2 +
+    Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180) *
+    Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(a));
+}
+
+async function nwsQuickNow(lat, lon){
+  // Use points -> forecastHourly first period (works well enough)
+  const p = await fetch(`https://api.weather.gov/points/${lat},${lon}`, { cache:"no-store" }).then(r=>r.json());
+  const url = p?.properties?.forecastHourly;
+  if (!url) return { temp:"--", cond:"N/A", icon:getGifName("Cloudy", true) };
+  const f = await fetch(url, { cache:"no-store" }).then(r=>r.json());
+  const now = f?.properties?.periods?.[0];
+  const temp = (typeof now?.temperature === "number") ? (now.temperature + "°") : "--";
+  const cond = now?.shortForecast || "N/A";
+  return { temp, cond, icon:getGifName(cond, true) };
+}
+
+function regionalTemplateIntoObsTable(){
+  const obsTable = document.getElementById("obs-table");
+  obsTable.innerHTML = `
+    <div id="ws-regional" class="outline-text" style="position:absolute; left:330px; top:300px; width:420px;">
+      <div style="color:#ffff00; font-size:20px; margin-bottom:6px;">Regional Observations</div>
+      <div id="ws-map" style="
+        position:relative; width:420px; height:240px;
+        background-image:url('https://raw.githubusercontent.com/lunvyyrx23/ws4000byaqzzyx/main/Basemap2.png');
+        background-size:cover; background-position:center;
+        overflow:hidden; border:2px solid #000;">
+      </div>
+      <div id="ws-reg-list" style="
+        margin-top:8px; display:grid; grid-template-columns: 1fr 1fr; gap:6px 14px;
+        font-size:18px; color:#fff;">
+      </div>
+    </div>
+  `;
+}
+
+function projectToMiniMap(lat, lon, w, h){
+  // Contiguous US-ish bounds for Basemap2.png
+  const bounds = { minLat: 22.0, maxLat: 54.0, minLon: -130.0, maxLon: -65.0 };
+  const x = (lon - bounds.minLon) / (bounds.maxLon - bounds.minLon) * w;
+  const y = (bounds.maxLat - lat) / (bounds.maxLat - bounds.minLat) * h;
+  return { x, y };
+}
+
+function renderRegionalMiniMap(items){
+  const map = document.getElementById("ws-map");
+  if (!map) return;
+  map.innerHTML = "";
+  const w = 420, h = 240;
+
+  items.forEach(it => {
+    const { x, y } = projectToMiniMap(it.lat, it.lon, w, h);
+
+    const dot = document.createElement("div");
+    dot.style.position="absolute";
+    dot.style.left = x+"px";
+    dot.style.top = y+"px";
+    dot.style.transform="translate(-50%,-50%)";
+    dot.style.width = it.isUser ? "10px" : "7px";
+    dot.style.height = it.isUser ? "10px" : "7px";
+    dot.style.borderRadius="50%";
+    dot.style.background = it.isUser ? "#fff" : "rgba(255,255,255,.7)";
+    dot.style.boxShadow = "0 0 0 2px #000";
+    map.appendChild(dot);
+
+    const label = document.createElement("div");
+    label.style.position="absolute";
+    label.style.left = x+"px";
+    label.style.top = y+"px";
+    label.style.transform="translate(8px,-14px)";
+    label.style.fontSize = "12px";
+    label.style.color = "#fff";
+    label.style.whiteSpace="nowrap";
+    label.style.textShadow="0 1px 2px rgba(0,0,0,.9)";
+    label.textContent = `${titleCase(it.name)} ${it.wx?.temp || ""}`;
+    map.appendChild(label);
+  });
+}
+
+function renderRegionalList(items){
+  const box = document.getElementById("ws-reg-list");
+  if (!box) return;
+  box.innerHTML = "";
+
+  items.forEach(it => {
+    const row = document.createElement("div");
+    row.style.display="flex";
+    row.style.justifyContent="space-between";
+    row.style.borderBottom="1px solid rgba(255,255,255,.15)";
+    row.style.paddingBottom="2px";
+
+    const left = document.createElement("div");
+    left.textContent = `${titleCase(it.name)}, ${String(it.state||"").toUpperCase()}`;
+    if (it.isUser) left.style.fontWeight="700";
+
+    const right = document.createElement("div");
+    right.style.display="flex";
+    right.style.gap="8px";
+    right.style.justifyContent="flex-end";
+
+    const temp = document.createElement("div");
+    temp.style.minWidth="40px";
+    temp.style.textAlign="right";
+    temp.style.color="#ffff00";
+    temp.textContent = it.wx?.temp || "--";
+
+    const cond = document.createElement("div");
+    cond.style.opacity="0.9";
+    cond.style.maxWidth="130px";
+    cond.style.overflow="hidden";
+    cond.style.whiteSpace="nowrap";
+    cond.style.textOverflow="ellipsis";
+    cond.textContent = titleCaseCond(it.wx?.cond || "");
+
+    right.appendChild(temp);
+    right.appendChild(cond);
+
+    row.appendChild(left);
+    row.appendChild(right);
+    box.appendChild(row);
+  });
+}
+
+async function updateRegionalDisplay(){
+  regionalTemplateIntoObsTable();
+
+  const user = {
+    name: (document.getElementById("loc-name")?.innerText || "Your City").split(",")[0],
+    state: (document.getElementById("loc-name")?.innerText || "").split(",")[1]?.trim() || "",
+    lat: currentCoords.lat, lon: currentCoords.lon, isUser:true
+  };
+
+  const selected = REGIONAL_CITIES
+    .map(c => ({...c, d:haversineMiles(user.lat,user.lon,c.lat,c.lon)}))
+    .filter(c => c.d <= RADIUS_MI)
+    .sort((a,b)=>a.d-b.d)
+    .slice(0, MAX_CITIES-1);
+
+  const items = [user].concat(selected.map(c => ({...c, isUser:false})));
+
+  const withWx = await Promise.all(items.map(async c=>{
+    try { return { ...c, wx: await nwsQuickNow(c.lat,c.lon) }; }
+    catch { return { ...c, wx:{ temp:"--", cond:"N/A", icon:getGifName("Cloudy", true) } }; }
+  }));
+
+  renderRegionalMiniMap(withWx);
+  renderRegionalList(withWx);
+}
+
+
+/* =========================
+   REGIONAL OBSERVATIONS MAP
+========================= */
+const REG_BOUNDS = { minLon:-127.5, maxLon:-66.8, minLat:19.6, maxLat:50.2 };
+const REG_W = 1091, REG_H = 820;
+const MANUAL_OFFSETS = {
+  "Miami":        { x:842, y:712 },
+  "Jacksonville": { x:821, y:586 },
+  "Key West":     { x:831, y:737 },
+  "Bowling Green":{ x:737, y:394 },
+};
+
+function regMercY(lat) {
+  const r = lat * Math.PI / 180;
+  return Math.log(Math.tan(Math.PI/4 + r/2));
+}
+function regProject(lat, lon) {
+  const x = (lon - REG_BOUNDS.minLon) / (REG_BOUNDS.maxLon - REG_BOUNDS.minLon) * REG_W;
+  const yMin = regMercY(REG_BOUNDS.minLat), yMax = regMercY(REG_BOUNDS.maxLat);
+  const y = (1 - (regMercY(lat) - yMin) / (yMax - yMin)) * REG_H;
+  return { x, y };
+}
+
+const REG_CITIES = [
+  {name:"Atlanta",lat:33.749,lon:-84.388},
+  {name:"Boston",lat:42.3584,lon:-71.0598},
+  {name:"Chicago",lat:41.9796,lon:-87.9045},
+  {name:"Cleveland",lat:41.4995,lon:-81.6954},
+  {name:"Dallas",lat:32.8959,lon:-97.0372},
+  {name:"Denver",lat:39.7391,lon:-104.9847},
+  {name:"Detroit",lat:42.3314,lon:-83.0457},
+  {name:"Hartford",lat:41.7637,lon:-72.6851},
+  {name:"Houston",lat:29.7633,lon:-95.3633},
+  {name:"Indianapolis",lat:39.7684,lon:-86.158},
+  {name:"Los Angeles",lat:34.0522,lon:-118.2437},
+  {name:"Miami",lat:25.7743,lon:-80.1937},
+  {name:"Minneapolis",lat:44.98,lon:-93.2638},
+  {name:"New York",lat:40.78,lon:-73.88},
+  {name:"Norfolk",lat:36.8468,lon:-76.2852},
+  {name:"Orlando",lat:28.5383,lon:-81.3792},
+  {name:"Philadelphia",lat:39.9523,lon:-75.1638},
+  {name:"Pittsburgh",lat:40.4406,lon:-79.9959},
+  {name:"St. Louis",lat:38.6273,lon:-90.1979},
+  {name:"San Francisco",lat:37.6148,lon:-122.3918},
+  {name:"Seattle",lat:47.6062,lon:-122.3321},
+  {name:"Syracuse",lat:43.0481,lon:-76.1474},
+  {name:"Tampa",lat:27.9756,lon:-82.5329},
+  {name:"Washington DC",lat:38.8951,lon:-77.0364},
+  {name:"Albany",lat:42.6526,lon:-73.7562},
+  {name:"Albuquerque",lat:35.0845,lon:-106.6511},
+  {name:"Amarillo",lat:35.222,lon:-101.8313},
+  {name:"Austin",lat:30.2671,lon:-97.7431},
+  {name:"Baltimore",lat:39.2904,lon:-76.6122},
+  {name:"Bangor",lat:44.8012,lon:-68.7778},
+  {name:"Birmingham",lat:33.5207,lon:-86.8025},
+  {name:"Bismarck",lat:46.8083,lon:-100.7837},
+  {name:"Boise",lat:43.6135,lon:-116.2034},
+  {name:"Buffalo",lat:42.8864,lon:-78.8784},
+  {name:"Charleston SC",lat:32.7766,lon:-79.9309},
+  {name:"Charleston WV",lat:38.3498,lon:-81.6326},
+  {name:"Charlotte",lat:35.2271,lon:-80.8431},
+  {name:"Cheyenne",lat:41.14,lon:-104.8202},
+  {name:"Cincinnati",lat:39.162,lon:-84.4569},
+  {name:"Columbia",lat:34.0007,lon:-81.0348},
+  {name:"Columbus",lat:39.9612,lon:-82.9988},
+  {name:"Des Moines",lat:41.6005,lon:-93.6091},
+  {name:"Duluth",lat:46.7833,lon:-92.1066},
+  {name:"El Paso",lat:31.7587,lon:-106.4869},
+  {name:"Eugene",lat:44.0521,lon:-123.0867},
+  {name:"Fargo",lat:46.8772,lon:-96.7898},
+  {name:"Fresno",lat:36.7477,lon:-119.7724},
+  {name:"Grand Rapids",lat:42.9634,lon:-85.6681},
+  {name:"Helena",lat:46.5927,lon:-112.0361},
+  {name:"Jackson",lat:32.2988,lon:-90.1848},
+  {name:"Jacksonville",lat:30.3322,lon:-81.6556},
+  {name:"Kansas City",lat:39.1142,lon:-94.6275},
+  {name:"Key West",lat:24.5557,lon:-81.7826},
+  {name:"Knoxville",lat:35.9606,lon:-83.9207},
+  {name:"Las Vegas",lat:36.175,lon:-115.1372},
+  {name:"Lincoln",lat:40.8,lon:-96.667},
+  {name:"Louisville",lat:38.2542,lon:-85.7594},
+  {name:"Memphis",lat:35.1495,lon:-90.049},
+  {name:"Milwaukee",lat:43.0389,lon:-87.9065},
+  {name:"Mobile",lat:30.6944,lon:-88.043},
+  {name:"Nashville",lat:36.1659,lon:-86.7844},
+  {name:"New Orleans",lat:29.9546,lon:-90.0751},
+  {name:"Oklahoma City",lat:35.4676,lon:-97.5164},
+  {name:"Omaha",lat:41.2586,lon:-95.9378},
+  {name:"Phoenix",lat:33.4484,lon:-112.074},
+  {name:"Pierre",lat:44.3683,lon:-100.351},
+  {name:"Portland ME",lat:43.6615,lon:-70.2553},
+  {name:"Portland OR",lat:45.5234,lon:-122.6762},
+  {name:"Providence",lat:41.824,lon:-71.4128},
+  {name:"Raleigh",lat:35.7721,lon:-78.6386},
+  {name:"Reno",lat:39.4986,lon:-119.7681},
+  {name:"Richmond",lat:37.5538,lon:-77.4603},
+  {name:"Sacramento",lat:38.5816,lon:-121.4944},
+  {name:"Salt Lake City",lat:40.7608,lon:-111.891},
+  {name:"San Antonio",lat:29.4241,lon:-98.4936},
+  {name:"San Diego",lat:32.7153,lon:-117.1573},
+  {name:"Savannah",lat:32.0835,lon:-81.0998},
+  {name:"Shreveport",lat:32.5251,lon:-93.7502},
+  {name:"Sioux Falls",lat:43.55,lon:-96.7003},
+  {name:"Spokane",lat:47.6597,lon:-117.4291},
+  {name:"Toledo",lat:41.6639,lon:-83.5552},
+  {name:"Tulsa",lat:36.154,lon:-95.9928},
+  {name:"Wichita",lat:37.6922,lon:-97.3375},
+  {name:"Tucson",lat:32.2216,lon:-110.9698},
+  {name:"Lubbock",lat:33.5779,lon:-101.8552},
+  {name:"Bowling Green",lat:36.9685,lon:-86.4808},
+];
+
+let regDataCache = null;
+let regLoading = false;
+
+async function renderRegionalObs() {
+  const dotsDiv = document.getElementById("regional-dots");
+  if (regDataCache) { drawRegionalDots(regDataCache); return; }
+  if (regLoading) return;
+  regLoading = true;
+  dotsDiv.innerHTML = "";
+
+  // Fetch all cities in batches of 6
+  const results = [];
+  const batchSize = 6;
+  for (let i = 0; i < REG_CITIES.length; i += batchSize) {
+    const batch = REG_CITIES.slice(i, i + batchSize);
+    const batchResults = await Promise.all(batch.map(async city => {
+      try {
+        const pData = await fetch(`https://api.weather.gov/points/${city.lat},${city.lon}`).then(r=>r.json());
+        const fh = pData?.properties?.forecastHourly;
+        if (!fh) throw new Error("no forecast");
+        const wData = await fetch(fh).then(r=>r.json());
+        const now = wData?.properties?.periods?.[0];
+        const temp = now?.temperature != null ? now.temperature + "°" : "--";
+        const isDay = now?.isDaytime !== undefined ? !!now.isDaytime : true;
+        const icon = getGifName(now?.shortForecast || "", true, isDay);
+        return { ...city, temp, icon };
+      } catch {
+        return { ...city, temp: "--", icon: getGifName("Cloudy", true, true) };
+      }
+    }));
+    results.push(...batchResults);
+    drawRegionalDots(results); // draw progressively as batches come in
+  }
+
+  regDataCache = results;
+  regLoading = false;
+}
+
+function drawRegionalDots(cities) {
+  const dotsDiv = document.getElementById("regional-dots");
+  if (!dotsDiv) return;
+  dotsDiv.innerHTML = "";
+
+  cities.forEach(city => {
+    let {x, y} = regProject(city.lat, city.lon);
+    if (MANUAL_OFFSETS[city.name]) { x = MANUAL_OFFSETS[city.name].x; y = MANUAL_OFFSETS[city.name].y; }
+    if (x < 0 || x > REG_W || y < 0 || y > REG_H) return;
+
+    const el = document.createElement("div");
+    el.style.cssText = `position:absolute; left:${x}px; top:${y}px; transform:translate(-50%,-50%);
+      display:flex; flex-direction:column; align-items:center; pointer-events:none; z-index:10;`;
+
+    const dot = document.createElement("div");
+    dot.style.cssText = `width:6px; height:6px; background:#fff; border-radius:50%;
+      border:1px solid #000; box-shadow:0 0 3px rgba(0,0,0,0.9); flex-shrink:0;`;
+
+    const img = document.createElement("img");
+    img.src = city.icon;
+    img.style.cssText = `width:40px; height:auto; image-rendering:pixelated; margin-top:2px;`;
+
+    const temp = document.createElement("div");
+    temp.textContent = city.temp;
+    temp.style.cssText = `color:#ffff00; font-size:14px; white-space:nowrap; line-height:1;
+      text-shadow:1px 1px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000;`;
+
+    const label = document.createElement("div");
+    label.textContent = city.name;
+    label.style.cssText = `color:#fff; font-size:11px; white-space:nowrap; line-height:1;
+      text-shadow:1px 1px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000;`;
+
+    el.appendChild(dot);
+    el.appendChild(img);
+    el.appendChild(temp);
+    el.appendChild(label);
+    dotsDiv.appendChild(el);
+  });
+}
+
+
+   - accepts "lat,lon" OR "City, ST"
+   - City geocode uses Nominatim (NWS has no city->lat/lon endpoint)
+========================= */
+async function fetchWithRetry(url, attempts = 3) {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const r = await fetch(url);
+      if (r.ok) return r.json();
+      throw new Error(`HTTP ${r.status}`);
+    } catch(e) {
+      if (i === attempts - 1) throw e;
+      await new Promise(res => setTimeout(res, 1500)); // wait 1.5s before retry
+    }
+  }
+}
+  const s = String(raw || "").trim();
+  if (!s) throw new Error("Empty location");
+
+  // Lat, Lon direct entry
+  const ll = s.match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/);
+  if (ll) {
+    return { lat: parseFloat(ll[1]), lon: parseFloat(ll[2]), label: formatCityLabel(s) };
+  }
+
+  // Try US Census geocoder first
+  try {
+    const url = `https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=${encodeURIComponent(s)}&benchmark=2020&format=json`;
+    const j = await fetch(url).then(r => r.json());
+    const match = j?.result?.addressMatches?.[0];
+    if (match?.coordinates) {
+      const lat = parseFloat(match.coordinates.y);
+      const lon = parseFloat(match.coordinates.x);
+      const label = formatCityLabel(match.matchedAddress || s);
+      if (Number.isFinite(lat) && Number.isFinite(lon)) return { lat, lon, label };
+    }
+  } catch (_) {}
+
+  // Fallback: Nominatim
+  try {
+    const nUrl = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(s)}`;
+    const n = await fetch(nUrl).then(r => r.json());
+    const hit = Array.isArray(n) ? n[0] : null;
+    if (hit?.lat && hit?.lon) {
+      const lat = parseFloat(hit.lat);
+      const lon = parseFloat(hit.lon);
+      const label = formatCityLabel(String(hit.display_name || s).split(',').slice(0,2).join(','));
+      if (Number.isFinite(lat) && Number.isFinite(lon)) return { lat, lon, label };
+    }
+  } catch (_) {}
+
+  throw new Error("Could not find location: " + s);
+}
+
+/* =========================
+   SCROLL ONCE (stop at end)
+========================= */
+function startScrollOnce(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  // reset
+  el.style.transition = "none";
+  el.style.transform = "translateY(0)";
+
+  requestAnimationFrame(() => {
+    const totalHeight = el.scrollHeight;
+    const containerHeight = el.parentElement?.clientHeight || 250;
+    const dist = totalHeight - containerHeight;
+    if (dist <= 0) return;
+    const duration = Math.max(4000, dist * 25); // min 4s
+    requestAnimationFrame(() => {
+      el.style.transition = `transform ${duration}ms linear`;
+      el.style.transform = `translateY(-${dist}px)`;
     });
   });
-});
-__obs.observe(document.documentElement, { childList: true, subtree: true });
-setInterval(__applyStarToAllNow, 600);
-window.addEventListener('load', __applyStarToAllNow);
-
-// ── API ──
-async function getCoordinates(city) {
-  const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city)}&format=json&limit=1`, {
-    headers: { 'User-Agent': 'WS4000Plus-Emulator' }
-  });
-  const data = await res.json();
-  if (!data.length) throw new Error('City not found');
-  return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
 }
 
-async function getWeatherForCity(city) {
-  const { lat, lon } = await getCoordinates(city);
-  const ptRes = await fetch(`https://api.weather.gov/points/${lat.toFixed(4)},${lon.toFixed(4)}`, {
-    headers: { 'User-Agent': 'WS4000Plus-Emulator' }
-  });
-  if (!ptRes.ok) throw new Error('US cities only');
-  const pt = await ptRes.json();
-  const [fRes, sRes] = await Promise.all([
-    fetch(pt.properties.forecast, { headers: { 'User-Agent': 'WS4000Plus-Emulator' } }),
-    fetch(pt.properties.observationStations, { headers: { 'User-Agent': 'WS4000Plus-Emulator' } })
-  ]);
-  const fData = await fRes.json();
-  const sData = await sRes.json();
-  const stationId = sData.features[0].properties.stationIdentifier;
-  const oRes = await fetch(`https://api.weather.gov/stations/${stationId}/observations/latest`, {
-    headers: { 'User-Agent': 'WS4000Plus-Emulator' }
-  });
-  const obs = oRes.ok ? (await oRes.json()).properties : null;
-  const cToF = c => c != null ? Math.round(c * 9/5 + 32) : null;
-  const mToMi = m => m != null ? (m / 1609.34).toFixed(1) : null;
-  const paToInHg = p => p != null ? (p / 3386.39).toFixed(2) : null;
-  const fmt = (v, suf) => v != null ? v + suf : 'N/A';
-  const cur = fData.properties.periods[0];
-  return {
-    location:   `${pt.properties.relativeLocation.properties.city}, ${pt.properties.relativeLocation.properties.state}`,
-    temp:       fmt(obs ? cToF(obs.temperature?.value) : cur.temperature, '°'),
-    condition:  obs?.textDescription || cur.shortForecast,
-    wind:       cur.windSpeed + ' ' + cur.windDirection,
-    humidity:   fmt(obs?.relativeHumidity?.value != null ? Math.round(obs.relativeHumidity.value) : null, '%'),
-    dewpoint:   fmt(obs?.dewpoint?.value != null ? cToF(obs.dewpoint.value) : null, '°'),
-    visibility: fmt(obs?.visibility?.value != null ? mToMi(obs.visibility.value) : null, ' mi.'),
-    pressure:   fmt(obs?.barometricPressure?.value != null ? paToInHg(obs.barometricPressure.value) : null, ''),
-    heatIndex:  fmt(obs?.heatIndex?.value != null ? cToF(obs.heatIndex.value) : null, '°'),
-    windChill:  fmt(obs?.windChill?.value != null ? cToF(obs.windChill.value) : null, '°'),
-  };
+/* =========================
+   BFDI EASTER EGG
+========================= */
+const BFDI_LOCATIONS = [
+  { name: "Dream Island", temp: 74, cond: "Sunny", wind: "S 5 mph", humidity: "55%", dewpoint: "55°", pressure: "1013 MB", ceiling: "UNLM", windchill: "--" },
+  { name: "Goiky", temp: 68, cond: "Partly Cloudy", wind: "SW 8 mph", humidity: "60%", dewpoint: "52°", pressure: "1010 MB", ceiling: "5000 FT", windchill: "--" },
+  { name: "Yoyle City", temp: 28, cond: "Snow", wind: "N 20 mph", humidity: "85%", dewpoint: "24°", pressure: "998 MB", ceiling: "800 FT", windchill: "16°" },
+  { name: "Summit Of Yoyle Mountain", temp: 12, cond: "Snow", wind: "NW 35 mph", humidity: "90%", dewpoint: "10°", pressure: "985 MB", ceiling: "200 FT", windchill: "-15°" },
+  { name: "Pillary Ruins", temp: 95, cond: "Sunny", wind: "SE 3 mph", humidity: "20%", dewpoint: "38°", pressure: "1005 MB", ceiling: "UNLM", windchill: "--" },
+  { name: "Elsewhere", temp: 54, cond: "Thunderstorm", wind: "W 45 mph", humidity: "99%", dewpoint: "52°", pressure: "975 MB", ceiling: "300 FT", windchill: "--" }
+];
+
+function showBFDIPicker() {
+  const overlay = document.createElement("div");
+  overlay.id = "bfdi-picker";
+  overlay.style.cssText = `position:absolute;inset:0;background:rgba(0,0,0,0.85);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;`;
+  overlay.innerHTML = `
+    <div style="color:#ffff00;font-size:38px;text-align:center;">Choose A Location</div>
+    ${BFDI_LOCATIONS.map((l,i) => `<button onclick="loadBFDI(${i})" style="background:#1a1a4a;color:#fff;border:2px solid #ffff00;font-size:22px;padding:8px 30px;cursor:pointer;width:400px;">${l.name}</button>`).join("")}
+    <button onclick="document.getElementById('bfdi-picker').remove()" style="background:#333;color:#aaa;border:1px solid #555;font-size:18px;padding:6px 20px;cursor:pointer;margin-top:10px;">Cancel</button>
+  `;
+  document.getElementById("ws4000-screen").appendChild(overlay);
 }
 
-// ── Clock ──
-const DAYS   = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
-const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-function updateClock() {
-  const n = new Date();
-  let h = n.getHours(), m = n.getMinutes(), s = n.getSeconds(), ap = 'AM';
-  if (h >= 12) ap = 'PM';
-  if (h > 12) h -= 12;
-  if (h === 0) h = 12;
-  document.getElementById('clock-time').textContent = `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')} ${ap}`;
-  document.getElementById('clock-date').textContent = `${DAYS[n.getDay()]} ${MONTHS[n.getMonth()]} ${n.getDate()}`;
-}
-updateClock();
-setInterval(updateClock, 1000);
-
-// ── UI ──
-function setStatus(msg, isError=false, blink=false) {
-  const el = document.getElementById('status-msg');
-  el.className = isError ? 'error' : (blink ? 'blink' : '');
-  el.textContent = msg;
+function loadBFDI(idx) {
+  const loc = BFDI_LOCATIONS[idx];
+  document.getElementById("bfdi-picker")?.remove();
+  document.getElementById("loc-name").innerText = loc.name;
+  document.getElementById("temp-value").innerText = loc.temp + "°";
+  document.getElementById("cond-text").innerText = loc.cond;
+  document.getElementById("wind-subtext").innerText = "Wind: " + loc.wind;
+  document.getElementById("weather-icon").src = getGifName(loc.cond, false, true);
+  document.getElementById("stats").innerHTML =
+    `Humidity: ${loc.humidity}<br>Dewpoint: ${loc.dewpoint}<br>Pressure: ${loc.pressure}<br>Ceiling: ${loc.ceiling}<br>Wind Chill: ${loc.windchill}`;
+  setPage("current");
 }
 
-function showWeather(data) {
-  document.getElementById('search-overlay').style.display = 'none';
-  document.getElementById('weather-data').style.display  = 'block';
-  document.getElementById('city-name').textContent   = data.location;
-  document.getElementById('cur-temp').textContent    = data.temp;
-  document.getElementById('cur-cond').textContent    = data.condition;
-  document.getElementById('wind-val').textContent    = data.wind;
-  document.getElementById('d-hum').textContent       = data.humidity;
-  document.getElementById('d-dew').textContent       = data.dewpoint;
-  document.getElementById('d-vis').textContent       = data.visibility;
-  document.getElementById('d-pres').textContent      = data.pressure;
-  document.getElementById('d-hi').textContent        = data.heatIndex;
-  document.getElementById('d-wc').textContent        = data.windChill;
-  document.getElementById('bottom-city').textContent = data.location;
+/* =========================
+   MINECRAFT EASTER EGG
+========================= */
+const MC_BIOMES = [
+  { name: "Plains", snowy: false },
+  { name: "Forest", snowy: false },
+  { name: "Desert", snowy: false },
+  { name: "Jungle", snowy: false },
+  { name: "Savanna", snowy: false },
+  { name: "Swamp", snowy: false },
+  { name: "Badlands", snowy: false },
+  { name: "Mushroom Fields", snowy: false },
+  { name: "Dark Forest", snowy: false },
+  { name: "Snowy Plains", snowy: true },
+  { name: "Ice Spikes", snowy: true },
+  { name: "Snowy Taiga", snowy: true },
+  { name: "Frozen Ocean", snowy: true },
+  { name: "Grove", snowy: true }
+];
+
+function loadMinecraft() {
+  const biome = MC_BIOMES[Math.floor(Math.random() * MC_BIOMES.length)];
+  const snowyOptions = ["Snow", "Snow"];
+  const normalOptions = ["Sunny", "Mostly Cloudy", "Rain", "Thunderstorm"];
+  const options = biome.snowy ? snowyOptions : normalOptions;
+  const cond = options[Math.floor(Math.random() * options.length)];
+  const temp = biome.snowy
+    ? Math.floor(Math.random() * 25) + 5
+    : Math.floor(Math.random() * 50) + 45;
+  const winds = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+  const wind = winds[Math.floor(Math.random() * winds.length)] + " " + (Math.floor(Math.random() * 20) + 2) + " mph";
+  const humidity = (Math.floor(Math.random() * 40) + 40) + "%";
+
+  document.getElementById("loc-name").innerText = biome.name + " Biome";
+  document.getElementById("temp-value").innerText = temp + "°";
+  document.getElementById("cond-text").innerText = cond;
+  document.getElementById("wind-subtext").innerText = "Wind: " + wind;
+  document.getElementById("weather-icon").src = getGifName(cond, false, true);
+  document.getElementById("stats").innerHTML =
+    `Humidity: ${humidity}<br>Dewpoint: --<br>Pressure: --<br>Ceiling: --<br>Wind Chill: --`;
+  setPage("current");
 }
 
-async function doSearch(cityVal) {
-  const input = (cityVal || document.getElementById('city-input').value).trim();
-  if (!input) return;
-  if (input.toLowerCase() === 'bfdi')      { setStatus('BFDI MODE — COMING SOON', false, true); return; }
-  if (input.toLowerCase() === 'minecraft') { setStatus('MINECRAFT MODE — COMING SOON', false, true); return; }
-  setStatus('FETCHING...', false, true);
-  try { showWeather(await getWeatherForCity(input)); }
-  catch(e) { setStatus(e.message.toUpperCase(), true); }
+async function getWeather(showLoader) {
+  const cityInput = document.getElementById("cityInput").value || "Charlotte, NC";
+
+  // Easter eggs
+  if (cityInput.trim().toLowerCase() === "bfdi") { showBFDIPicker(); return; }
+  if (cityInput.trim().toLowerCase() === "minecraft") { loadMinecraft(); return; }
+
+  const loader = document.getElementById("loading-screen");
+
+  if (showLoader) {
+    loader.innerText = "Loading Data...";
+    loader.style.display = "flex";
+  }
+
+  if (!musicStarted) { shuffleMusic(); playNextTrack(); musicStarted = true; }
+  else { audioPlayer.muted = muted; audioPlayer.play().catch(()=>{}); }
+
+  try {
+    loader.innerText = "Finding location...";
+    const loc = await parseInputToLatLon(cityInput);
+    currentCoords = { lat: loc.lat, lon: loc.lon };
+    document.getElementById("loc-name").innerText = loc.label;
+
+    loader.innerText = "Contacting NWS...";
+    activeRegionName = pickRegionByLatLon(currentCoords.lat, currentCoords.lon);
+
+    const pData = await fetch(`https://api.weather.gov/points/${currentCoords.lat},${currentCoords.lon}`).then(r => r.json());
+    pointMeta.forecastHourlyUrl = pData?.properties?.forecastHourly || null;
+    pointMeta.stationsUrl = pData?.properties?.observationStations || null;
+    if (!pointMeta.forecastHourlyUrl) throw new Error("NWS does not cover this location (US only)");
+
+    loader.innerText = "Loading forecast...";
+    await refreshNwsData(true);
+
+    if (showLoader) loader.style.display = "none";
+    setPage("current");
+    pageIndex = 0;
+    startLoop();
+
+    startPolling();
+  } catch (e) {
+    console.error(e);
+    if (showLoader) loader.innerText = "ERROR LOADING DATA\n" + String(e && e.message ? e.message : e);
+  }
 }
 
-document.getElementById('search-btn').addEventListener('click', () => doSearch());
-document.getElementById('city-input').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
-document.getElementById('search-btn2').addEventListener('click', () => {
-  const v = document.getElementById('city-input2').value.trim();
-  if (!v) return;
-  document.getElementById('weather-data').style.display = 'none';
-  document.getElementById('search-overlay').style.display = 'flex';
-  doSearch(v);
-});
-document.getElementById('city-input2').addEventListener('keydown', e => {
-  if (e.key !== 'Enter') return;
-  const v = document.getElementById('city-input2').value.trim();
-  if (!v) return;
-  document.getElementById('weather-data').style.display = 'none';
-  document.getElementById('search-overlay').style.display = 'flex';
-  doSearch(v);
-});
+async function refreshNwsData(forceRepaint) {
+  if (!pointMeta.forecastHourlyUrl) return;
+
+  const wData = await (await fetch(pointMeta.forecastHourlyUrl, { cache:"no-store" })).json();
+  const periods = wData?.properties?.periods || [];
+  hourlyData = periods;
+    if (typeof periods?.[0]?.isDaytime === 'boolean') isDaytimeNow = periods[0].isDaytime;
+
+  // set true night/day from NWS
+  if (periods?.[0]?.isDaytime !== undefined) isDaytimeNow = !!periods[0].isDaytime;
+
+  const newForecastStamp = periods?.[0]?.startTime || null;
+
+  await refreshObservation();
+
+  const changed =
+    (newForecastStamp && newForecastStamp !== lastForecastUpdateStamp) ||
+    (lastObsUpdateStamp && lastObsUpdateStamp !== (latestObs?.timestamp || latestObs?.observationTime || null));
+
+  if (forceRepaint || changed) {
+    lastForecastUpdateStamp = newForecastStamp || lastForecastUpdateStamp;
+    updateCurrentConditionsBox();
+    if (pageList[pageIndex] === "hourly") renderHourly();
+    if (pageList[pageIndex] === "local-obs") renderLocalObs();
+    if (pageList[pageIndex] === "travel") renderTravel();
+    if (pageList[pageIndex] === "regional-obs") updateRegionalDisplay();
+  }
+
+  const now = new Date();
+  document.getElementById("last-update").innerText = now.toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" });
+}
+
+async function refreshObservation() {
+  if (!pointMeta.stationsUrl) return;
+
+  const stationsData = await (await fetch(pointMeta.stationsUrl, { cache:"no-store" })).json();
+  const firstStation = stationsData?.features?.[0]?.properties?.stationIdentifier;
+  if (!firstStation) { latestObs = null; return; }
+
+  // Station meta for "transmitter" label
+  if (firstStation !== currentStationId) {
+    currentStationId = firstStation;
+    currentStationName = null;
+    try {
+      const sMeta = await (await fetch(`https://api.weather.gov/stations/${firstStation}`, { cache:"no-store" })).json();
+      currentStationName = sMeta?.properties?.name || null;
+    } catch {}
+  }
+
+  const obsData = await (await fetch(`https://api.weather.gov/stations/${firstStation}/observations/latest`, { cache:"no-store" })).json();
+  latestObs = obsData?.properties || null;
+  lastObsUpdateStamp = latestObs?.timestamp || latestObs?.observationTime || lastObsUpdateStamp;
+}
+
+function updateCurrentConditionsBox() {
+  const now = hourlyData?.[0];
+  if (!now) return;
+
+  const tempF = now.temperature ?? null;
+  const windTxt = (now.windSpeed && now.windDirection) ? `Wind: ${now.windDirection} ${now.windSpeed}` : "Wind: --";
+  document.getElementById("wind-subtext").innerText = windTxt;
+
+  document.getElementById("temp-value").innerText = (tempF != null ? tempF : "--") + "°";
+  document.getElementById("cond-text").innerText = titleCaseCond(now.shortForecast || "—");
+
+  const icon = getGifName(now.shortForecast);
+  document.getElementById("weather-icon").src = icon;
+
+  let windMph = null;
+  if (latestObs?.windSpeed?.value != null) windMph = mphFromKph(latestObs.windSpeed.value);
+  else if (typeof now.windSpeed === "string") {
+    const m = now.windSpeed.match(/(\d+)/);
+    if (m) windMph = parseInt(m[1], 10);
+  }
+
+  const wc = calcWindChillF(tempF, windMph);
+  const ceiling = ceilingFromObs(latestObs);
+
+  const stats = document.getElementById("stats");
+  const rh = (latestObs?.relativeHumidity?.value != null) ? (Math.round(latestObs.relativeHumidity.value) + "%") : "--";
+  const dp = (latestObs?.dewpoint?.value != null) ? (fFromC(latestObs.dewpoint.value) + "°") : "--";
+  const pres = (latestObs?.barometricPressure?.value != null) ? (Math.round(latestObs.barometricPressure.value/100) + " MB") : "--";
+
+stats.innerHTML =
+  `Humidity: ${rh}<br>` +
+  `Dewpoint: ${dp}<br>` +
+  `Pressure: ${pres}<br>` +
+  `Ceiling: ${ceiling}<br>` +
+  `Wind Chill: ${wc != null ? (wc + "°") : "--"}`;
+}
+
+function startPolling() {
+  clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    try { await refreshNwsData(false); } catch (e) { console.error(e); }
+  }, POLL_MINS * 60 * 1000);
+}
+async function manualRefresh() {
+  try { await refreshNwsData(true); } catch (e) { console.error(e); }
+}
+
+/* =========================
+   TRAVEL CITIES (fixed list)
+========================= */
+async function loadTravelCities(list) {
+  const out = [];
+  const batchSize = 4;
+  for (let i = 0; i < list.length; i += batchSize) {
+    const batch = list.slice(i, i + batchSize);
+    const results = await Promise.all(batch.map(async item => {
+      try {
+        const loc = await parseInputToLatLon(item.q);
+        const lat = loc.lat, lon = loc.lon;
+
+        const pData = await fetch(`https://api.weather.gov/points/${lat},${lon}`, { cache:"no-store" }).then(r=>r.json());
+        const fh = pData?.properties?.forecastHourly;
+        const fd = pData?.properties?.forecast;
+        if (!fh) throw new Error("no forecastHourly");
+
+        const [wData, dData] = await Promise.all([
+          fetch(fh, { cache:"no-store" }).then(r=>r.json()),
+          fd ? fetch(fd, { cache:"no-store" }).then(r=>r.json()) : Promise.resolve(null)
+        ]);
+        const now = wData?.properties?.periods?.[0];
+        const periods = dData?.properties?.periods || [];
+        const nightPeriod = periods.find(p => !p.isDaytime) || periods[1] || null;
+        const low = nightPeriod?.temperature ?? "--";
+        const temp = now?.temperature ?? "--";
+        const isDay = (typeof now?.isDaytime === "boolean") ? now.isDaytime : true;
+        const icon = getGifName(now?.shortForecast || "Cloudy", true, isDay);
+        const cond = titleCaseCond(now?.shortForecast || "--");
+
+        return { city: item.city, temp, low, icon, cond };
+      } catch {
+        return { city: item.city, temp: "--", low: "--", icon: getGifName("Cloudy", true, true), cond: "--" };
+      }
+    }));
+    out.push(...results);
+  }
+  return out;
+}
+
+/* =========================
+   INIT
+========================= */
+window.onload = async () => {
+  initTheme();
+// Mobile auto-scale
+  const isMobile = window.matchMedia && window.matchMedia("(max-width: 900px)").matches;
+  if (isMobile) {
+    document.body.classList.add("mobile");
+    document.documentElement.style.setProperty("--ui-scale", "0.30");
+  }
+  document.body.classList.toggle("scan-off", !scanOn);
+
+  // Travel cities load lazily when travel page is first visited
+  setPage("current");
+  document.getElementById("cityInput").value = "Charlotte, NC";
+  getWeather(true);
+};
 </script>
 </body>
 </html>
