@@ -301,8 +301,8 @@
       </div>
 
       <div id="regional-content" style="display:none; position:absolute; inset:0;">
-        <div id="regional-map" style="position:absolute; inset:0; background-image:url('https://wsbylunv.neocities.org/ws4000wherediditgo.png'); background-size:100% 100%;"></div>
-        <div id="regional-dots"></div>
+        <canvas id="regional-canvas" width="1091" height="820" style="position:absolute; inset:0;"></canvas>
+        <div id="regional-dots" style="position:absolute; inset:0;"></div>
       </div>
 
       <div class="location-label outline-text" id="loc-name" style="display:none;">--</div>
@@ -646,7 +646,6 @@ function setPage(page) {
   return fadeSwap(() => {
   screen.classList.remove("travel-bg", "regional-bg");
   screen.style.backgroundImage = "";
-  screen.style.backgroundSize = "";
   setMarkersVisible(false);
 
   const locName = document.getElementById("loc-name");
@@ -673,8 +672,6 @@ function setPage(page) {
     renderTravel();
   } else if (page === "regional-obs") {
     document.getElementById("page-header").innerHTML = "Regional<br>Observations";
-    screen.style.backgroundImage = "url('https://wsbylunv.neocities.org/ws4000wherediditgo.png'), url('https://raw.githubusercontent.com/lunvyyrx23/ws4000byaqzzyx/main/Basemap2.png')";
-    screen.style.backgroundSize = "100% 100%, 100% 100%";
     showOnly(["regional-content"]);
     if (locName) locName.style.display = "none";
     renderRegionalObs();
@@ -1143,81 +1140,148 @@ const REG_CITIES = [
 
 let regDataCache = null;
 let regLoading = false;
+let regLastCoords = null;
+
+const MI_PER_LAT = 69.0;
+function miPerLon(lat) { return 69.0 * Math.cos(lat * Math.PI / 180); }
+
+// Map frame pixel bounds inside the WS4000 UI
+const MAP_LEFT = 80, MAP_TOP = 170, MAP_RIGHT = 1010, MAP_BOTTOM = 750;
+const MAP_PW = MAP_RIGHT - MAP_LEFT, MAP_PH = MAP_BOTTOM - MAP_TOP;
+
+// Full Basemap2 covers continental US in these lat/lon bounds
+const FULL_BOUNDS = { minLon:-127.5, maxLon:-66.8, minLat:19.6, maxLat:50.2 };
+
+function fullMercY(lat) { return Math.log(Math.tan(Math.PI/4 + lat*Math.PI/360)); }
+function latLonToFullPx(lat, lon, imgW, imgH) {
+  const x = (lon - FULL_BOUNDS.minLon) / (FULL_BOUNDS.maxLon - FULL_BOUNDS.minLon) * imgW;
+  const yMin = fullMercY(FULL_BOUNDS.minLat), yMax = fullMercY(FULL_BOUNDS.maxLat);
+  const y = (1 - (fullMercY(lat) - yMin) / (yMax - yMin)) * imgH;
+  return {x, y};
+}
+
+// Preload both images once
+const _basemap = new Image(); _basemap.crossOrigin="anonymous"; _basemap.src="https://raw.githubusercontent.com/lunvyyrx23/ws4000byaqzzyx/main/Basemap2.png";
+const _overlay = new Image(); _overlay.crossOrigin="anonymous"; _overlay.src="https://wsbylunv.neocities.org/ws4000wherediditgo.png";
+
+async function waitForImage(img) {
+  if (img.complete && img.naturalWidth) return;
+  return new Promise(res => { img.onload = res; img.onerror = res; });
+}
 
 async function renderRegionalObs() {
-  const dotsDiv = document.getElementById("regional-dots");
-  if (regDataCache) { drawRegionalDots(regDataCache); return; }
+  const clat = currentCoords.lat, clon = currentCoords.lon;
+
+  if (regLastCoords && (Math.abs(regLastCoords.lat-clat)>0.1 || Math.abs(regLastCoords.lon-clon)>0.1)) {
+    regDataCache = null; regLoading = false;
+  }
+  regLastCoords = { lat:clat, lon:clon };
+
+  if (regDataCache) { await drawRegionalCanvas(regDataCache, clat, clon); return; }
   if (regLoading) return;
   regLoading = true;
-  dotsDiv.innerHTML = "";
 
-  // Fetch all cities in batches of 6
+  document.getElementById("regional-dots").innerHTML = "";
+
+  // Filter cities within 450mi horizontal / 200mi vertical
+  const nearby = REG_CITIES.filter(city => {
+    const dLat = Math.abs(city.lat - clat) * MI_PER_LAT;
+    const dLon = Math.abs(city.lon - clon) * miPerLon(clat);
+    return dLon <= 450 && dLat <= 200;
+  });
+
   const results = [];
   const batchSize = 6;
-  for (let i = 0; i < REG_CITIES.length; i += batchSize) {
-    const batch = REG_CITIES.slice(i, i + batchSize);
+  for (let i = 0; i < nearby.length; i += batchSize) {
+    const batch = nearby.slice(i, i + batchSize);
     const batchResults = await Promise.all(batch.map(async city => {
       try {
         const pData = await fetch(`https://api.weather.gov/points/${city.lat},${city.lon}`).then(r=>r.json());
         const fh = pData?.properties?.forecastHourly;
-        if (!fh) throw new Error("no forecast");
+        if (!fh) throw new Error();
         const wData = await fetch(fh).then(r=>r.json());
         const now = wData?.properties?.periods?.[0];
-        const temp = now?.temperature != null ? now.temperature + "°" : "--";
+        const temp = now?.temperature != null ? now.temperature+"°" : "--";
         const isDay = now?.isDaytime !== undefined ? !!now.isDaytime : true;
-        const icon = getGifName(now?.shortForecast || "", true, isDay);
-        return { ...city, temp, icon };
-      } catch {
-        return { ...city, temp: "--", icon: getGifName("Cloudy", true, true) };
-      }
+        const icon = getGifName(now?.shortForecast||"", true, isDay);
+        return {...city, temp, icon};
+      } catch { return {...city, temp:"--", icon:getGifName("Cloudy",true,true)}; }
     }));
     results.push(...batchResults);
-    drawRegionalDots(results); // draw progressively as batches come in
+    await drawRegionalCanvas(results, clat, clon);
   }
 
   regDataCache = results;
   regLoading = false;
 }
 
-function drawRegionalDots(cities) {
-  const dotsDiv = document.getElementById("regional-dots");
-  if (!dotsDiv) return;
-  dotsDiv.innerHTML = "";
+async function drawRegionalCanvas(cities, clat, clon) {
+  const canvas = document.getElementById("regional-canvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const CW = canvas.width, CH = canvas.height;
 
+  await waitForImage(_basemap);
+  await waitForImage(_overlay);
+
+  ctx.clearRect(0, 0, CW, CH);
+
+  // Work out view bounds: ±450mi H, ±200mi V around searched location
+  const latRange = 200 / MI_PER_LAT;
+  const lonRange = 450 / miPerLon(clat);
+  const viewMinLat = clat - latRange, viewMaxLat = clat + latRange;
+  const viewMinLon = clon - lonRange, viewMaxLon = clon + lonRange;
+
+  // Map those view bounds to pixel coords on the full Basemap2 image
+  const imgW = _basemap.naturalWidth, imgH = _basemap.naturalHeight;
+  const tl = latLonToFullPx(viewMaxLat, viewMinLon, imgW, imgH);
+  const br = latLonToFullPx(viewMinLat, viewMaxLon, imgW, imgH);
+
+  // Draw the sliced portion of Basemap2 into the map frame area
+  ctx.drawImage(_basemap, tl.x, tl.y, br.x-tl.x, br.y-tl.y, MAP_LEFT, MAP_TOP, MAP_PW, MAP_PH);
+
+  // Draw WS4000 overlay frame on top
+  ctx.drawImage(_overlay, 0, 0, CW, CH);
+
+  // Project city lat/lon into screen coords within the map frame
+  function toScreen(lat, lon) {
+    const px = MAP_LEFT + (lon - viewMinLon) / (viewMaxLon - viewMinLon) * MAP_PW;
+    const py = MAP_TOP + (1 - (lat - viewMinLat) / (viewMaxLat - viewMinLat)) * MAP_PH;
+    return {x:px, y:py};
+  }
+
+  // Draw city dots on canvas
   cities.forEach(city => {
-    let {x, y} = regProject(city.lat, city.lon);
-    if (MANUAL_OFFSETS[city.name]) { x = MANUAL_OFFSETS[city.name].x; y = MANUAL_OFFSETS[city.name].y; }
-    if (x < 0 || x > REG_W || y < 0 || y > REG_H) return;
+    const {x, y} = toScreen(city.lat, city.lon);
+    if (x < MAP_LEFT || x > MAP_RIGHT || y < MAP_TOP || y > MAP_BOTTOM) return;
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI*2);
+    ctx.fillStyle = "#fff";
+    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 1.5;
+    ctx.fill(); ctx.stroke();
+  });
+
+  // Draw city icons + labels as HTML overlays
+  const dotsDiv = document.getElementById("regional-dots");
+  dotsDiv.innerHTML = "";
+  cities.forEach(city => {
+    const {x, y} = toScreen(city.lat, city.lon);
+    if (x < MAP_LEFT || x > MAP_RIGHT || y < MAP_TOP || y > MAP_BOTTOM) return;
 
     const el = document.createElement("div");
-    el.style.cssText = `position:absolute; left:${x}px; top:${y}px; transform:translate(-50%,-50%);
-      display:flex; flex-direction:column; align-items:center; pointer-events:none; z-index:10;`;
-
-    const dot = document.createElement("div");
-    dot.style.cssText = `width:6px; height:6px; background:#fff; border-radius:50%;
-      border:1px solid #000; box-shadow:0 0 3px rgba(0,0,0,0.9); flex-shrink:0;`;
-
-    const img = document.createElement("img");
-    img.src = city.icon;
-    img.style.cssText = `width:40px; height:auto; image-rendering:pixelated; margin-top:2px;`;
-
-    const temp = document.createElement("div");
-    temp.textContent = city.temp;
-    temp.style.cssText = `color:#ffff00; font-size:14px; white-space:nowrap; line-height:1;
-      text-shadow:1px 1px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000;`;
-
-    const label = document.createElement("div");
-    label.textContent = city.name;
-    label.style.cssText = `color:#fff; font-size:11px; white-space:nowrap; line-height:1;
-      text-shadow:1px 1px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000;`;
-
-    el.appendChild(dot);
-    el.appendChild(img);
-    el.appendChild(temp);
-    el.appendChild(label);
+    el.style.cssText = `position:absolute;left:${x}px;top:${y+6}px;transform:translateX(-50%);
+      display:flex;flex-direction:column;align-items:center;pointer-events:none;z-index:10;`;
+    el.innerHTML = `
+      <img src="${city.icon}" style="width:36px;height:auto;image-rendering:pixelated;">
+      <div style="color:#ffff00;font-size:13px;white-space:nowrap;line-height:1;text-shadow:1px 1px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000;">${city.temp}</div>
+      <div style="color:#fff;font-size:10px;white-space:nowrap;line-height:1;text-shadow:1px 1px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000;">${city.name}</div>
+    `;
     dotsDiv.appendChild(el);
   });
 }
+
+
 
 
 /* =========================
